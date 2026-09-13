@@ -1,0 +1,1173 @@
+/* ══════════════════════════════════════════════════════════════════════
+   @ifantasy/feed — stylesheet
+
+   Step 1 scope: viewport, scroll-snap, card shell, mounting window.
+   No gesture styles, no video, no save/pass. Those arrive in steps 2–6.
+
+   Every colour is a custom property set by the theme. No hex values here.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.fd {
+  position: fixed;
+  inset: 0;
+  background: var(--fd-ground);
+  color: #fff;
+  font-family: var(--fd-body);
+  overscroll-behavior: none;
+}
+
+/* ── viewport ─────────────────────────────────────────────────────────
+   dvh, not vh. On mobile Safari and Chrome the address bar collapses on
+   scroll; vh is frozen at the tallest value, so a vh-sized card is
+   taller than the visible area and the snap point sits off-screen.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__viewport {
+  height: 100dvh;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+  /* Stops pull-to-refresh and scroll chaining to the page behind. */
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.fd__viewport::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── card ─────────────────────────────────────────────────────────────
+   Every card is always in the DOM so the scroll geometry is real and the
+   scrollbar never jumps. Only the cards inside the mount window render
+   their media — see FeedCard.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__card {
+  position: relative;
+  height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always; /* never skip a person on a fast flick */
+  overflow: hidden;
+  background: var(--fd-ground);
+  contain: layout paint;
+}
+
+.fd__media {
+  position: absolute;
+  inset: 0;
+}
+.fd__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Placeholder shown for cards outside the mount window, and while the
+   cover image decodes. Never a spinner — a still ground reads as calm,
+   a spinner reads as broken. */
+.fd__holding {
+  position: absolute;
+  inset: 0;
+  background: var(--fd-ground);
+}
+
+.fd__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(10, 16, 13, 0.6) 0%,
+    rgba(10, 16, 13, 0) 22%,
+    rgba(10, 16, 13, 0) 44%,
+    var(--fd-scrim) 100%
+  );
+}
+
+/* ── chrome ──────────────────────────────────────────────────────────── */
+.fd__top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: calc(env(safe-area-inset-top, 0px) + 14px) 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fd__chip {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 100px;
+  padding: 6px 12px;
+  font: 600 11px var(--fd-body);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.fd__spacer {
+  margin-left: auto;
+}
+
+/* Quick exit. Persists into the feed — full-screen media is the most
+   exposing surface in the estate, so the control cannot disappear
+   because the chrome did. Never tracked. */
+.fd__exit {
+  background: rgba(10, 16, 13, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 100px;
+  padding: 6px 12px;
+  font: 600 11px var(--fd-body);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  min-width: 44px;
+  min-height: 34px;
+}
+
+.fd__body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 0 14px calc(env(safe-area-inset-bottom, 0px) + 16px);
+}
+
+/* ── end card ────────────────────────────────────────────────────────── */
+.fd__end {
+  position: relative;
+  height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  background: var(--fd-ground);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  padding: 34px 22px;
+}
+
+/* ── first-run banner ────────────────────────────────────────────────── */
+.fd__banner {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: calc(env(safe-area-inset-top, 0px) + 58px);
+  z-index: 7;
+  background: var(--fd-surface);
+  color: #191c19;
+  border-radius: 12px;
+  padding: 11px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+}
+
+/* ── accessibility ───────────────────────────────────────────────────── */
+.fd :focus-visible {
+  outline: 2px solid var(--fd-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.fd__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fd__viewport {
+    scroll-behavior: auto;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   STEP 2 — media stage, segments, tap zones
+   ══════════════════════════════════════════════════════════════════════ */
+
+.fd__frame{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  object-fit:cover; display:block;
+  /* Short crossfade. A hard cut reads as a glitch on a phone; anything
+     longer than this reads as sluggish. */
+  animation:fd-in 140ms ease-out both;
+}
+.fd__frame.is-fading{
+  animation:fd-out 140ms ease-out both;
+  z-index:1;
+}
+@keyframes fd-in{ from{opacity:0} to{opacity:1} }
+@keyframes fd-out{ from{opacity:1} to{opacity:0} }
+
+@media (prefers-reduced-motion: reduce){
+  .fd__frame, .fd__frame.is-fading{ animation:none }
+  .fd__frame.is-fading{ display:none }
+}
+
+/* ── segmented progress bar ────────────────────────────────────────────
+   Sits above the top chrome so it reads as belonging to the media rather
+   than to the interface. Same pattern as every story format, which is the
+   whole reason it needs no explaining.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__segs{
+  position:absolute;
+  top:calc(env(safe-area-inset-top, 0px) + 7px);
+  left:12px; right:12px;
+  z-index:6;
+  display:flex; gap:3px;
+  pointer-events:none;
+}
+.fd__seg{
+  flex:1; height:2.5px; border-radius:2px;
+  background:rgba(255,255,255,.28);
+  position:relative; overflow:hidden;
+}
+.fd__seg.is-done{ background:#fff }
+.fd__seg.is-now{ background:#fff }
+
+/* A video segment carries a notch on its leading edge — the only advance
+   warning that the next tap lands on video rather than a photograph. */
+.fd__seg.is-video::before{
+  content:""; position:absolute; left:0; top:0; bottom:0;
+  width:3px; background:rgba(255,255,255,.75);
+}
+/* Step 6 fills this in real time from the video's own clock. */
+.fd__seg.is-now.is-video{ background:rgba(255,255,255,.28) }
+.fd__seg.is-now.is-video::after{
+  content:""; position:absolute; inset:0 100% 0 0;
+  background:#fff; border-radius:2px;
+}
+
+/* ── tap zones ─────────────────────────────────────────────────────────
+   Above the media, below the body. A tap on the name, the tags or the
+   action row must never advance a photograph.
+   Left third goes back, the rest goes forward — the ratio everyone has
+   already learned from stories.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__taps{
+  position:absolute;
+  top:0; left:0; right:0;
+  /* Stops short of the body so the bottom of the card stays interactive. */
+  bottom:42%;
+  z-index:3;
+  display:flex;
+}
+.fd__tap{
+  background:none; border:0; padding:0; margin:0;
+  -webkit-tap-highlight-color:transparent;
+  cursor:default;
+}
+.fd__tap--prev{ flex:0 0 33% }
+.fd__tap--next{ flex:1 1 auto }
+
+/* The body sits above the tap zones. */
+.fd__body{ z-index:4 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   STEP 3 — gesture layer
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* The whole coexistence trick, in one line.
+   pan-y hands vertical panning to the browser — which keeps native
+   scroll-snap, momentum and interruption for free — and reserves
+   horizontal for us. Without it the browser starts a horizontal pan we
+   cannot cancel, and with `none` we would have to reimplement vertical
+   scrolling by hand, badly. */
+.fd__card{
+  touch-action:pan-y;
+}
+
+.fd__drag{
+  position:absolute; inset:0;
+  will-change:transform;
+}
+.fd__drag.is-settling{
+  transition:transform 220ms cubic-bezier(.22,.61,.36,1);
+}
+@media (prefers-reduced-motion: reduce){
+  .fd__drag.is-settling{ transition:none }
+}
+
+/* ── stamps ────────────────────────────────────────────────────────────
+   Opacity tracks the drag so the outcome is visible before release. The
+   rotation is small: a full-screen card is not a playing card, and
+   anything more reads as a toy.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__stamp{
+  position:absolute;
+  top:calc(env(safe-area-inset-top, 0px) + 64px);
+  z-index:8;
+  border:3px solid; border-radius:10px;
+  padding:7px 14px;
+  font:800 19px/1 var(--fd-body);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  pointer-events:none;
+}
+.fd__stamp--save{
+  left:18px;
+  transform:rotate(-11deg);
+  border-color:#7de3a8; color:#7de3a8;
+}
+.fd__stamp--pass{
+  right:18px;
+  transform:rotate(11deg);
+  border-color:rgba(255,255,255,.65); color:rgba(255,255,255,.65);
+}
+
+/* ── action row ────────────────────────────────────────────────────────
+   Product-supplied markup, shared classes. Every gesture has a button
+   equivalent — a meaningful share of people never learn a gesture, and
+   the ones who cannot use one are exactly the ones who most need the
+   button.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__acts{ display:flex; align-items:center; gap:9px }
+.fd__circ{
+  width:46px; height:46px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:19px; color:#fff;
+  background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.25);
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+.fd__circ--save{
+  background:#fff; color:var(--fd-save); border-color:#fff; font-size:21px;
+}
+.fd__open{
+  flex:1; border:0;
+  background:rgba(255,255,255,.95); color:#14291f;
+  border-radius:100px; padding:13px;
+  font:600 13.5px var(--fd-body);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   STEP 4 — saves, passes, flush
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── passed marker ─────────────────────────────────────────────────────
+   A card passed during this session stays in place. Dimming the whole
+   card would be the obvious move and is wrong — the person may be
+   scrolling back precisely because they changed their mind, and they
+   need to see who it was.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__passed{
+  position:absolute;
+  top:calc(env(safe-area-inset-top, 0px) + 58px);
+  left:12px;
+  z-index:8;
+  display:flex; align-items:center; gap:10px;
+  background:rgba(10,16,13,.72);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:100px;
+  padding:6px 6px 6px 14px;
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  font:600 11px var(--fd-body);
+  color:rgba(255,255,255,.8);
+}
+.fd__undo{
+  background:#fff; color:#14291f;
+  border:0; border-radius:100px;
+  padding:6px 13px;
+  font:600 11px var(--fd-body);
+  min-height:30px;
+}
+
+/* ── saved notice ──────────────────────────────────────────────────────
+   Shown once, after the first save. It says what is true: these are on
+   this device. Claiming an account keeps them when no account exists
+   would be a lie the first time someone changed phone.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__notice{
+  position:fixed;
+  left:10px; right:10px;
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 12px);
+  z-index:25;
+  background:var(--fd-surface);
+  color:#191c19;
+  border-radius:12px;
+  padding:11px 12px;
+  display:flex; gap:10px; align-items:flex-start;
+  box-shadow:0 8px 26px rgba(0,0,0,.24);
+}
+.fd__notice b{
+  display:block;
+  font:600 12.5px var(--fd-body);
+  margin-bottom:2px;
+}
+.fd__notice p{
+  margin:0;
+  font:400 11.5px/1.45 var(--fd-body);
+  color:#4a504a;
+}
+.fd__notice-x{
+  background:none; border:0;
+  color:#8f948c; font-size:14px;
+  padding:2px 4px; margin-left:auto;
+  min-width:32px; min-height:32px;
+}
+
+/* ── end card: flush ───────────────────────────────────────────────── */
+.fd__endopt{
+  display:flex; align-items:center; gap:11px;
+  width:100%; text-align:left;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:11px;
+  padding:13px 14px;
+  margin-bottom:9px;
+  color:#fff;
+}
+.fd__endopt i{
+  font-style:normal; font-size:16px;
+  width:22px; text-align:center; opacity:.8;
+}
+.fd__endopt strong{
+  display:block;
+  font:600 13.5px var(--fd-body);
+}
+.fd__endopt em{
+  font-style:normal;
+  font:400 11.5px var(--fd-body);
+  color:rgba(255,255,255,.58);
+}
+
+/* ── saved state on the action row ─────────────────────────────────── */
+.fd__circ--save[aria-pressed="true"]{
+  background:var(--fd-save);
+  border-color:var(--fd-save);
+  color:#fff;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DESKTOP — the column
+
+   A full-bleed card across a 27" monitor is not a phone-shaped product
+   shown large, it is a different product. Instagram, TikTok and Reels all
+   letterbox to a phone column on desktop for the same reason: the
+   composition is authored for 9:16 and stretching it wrecks the framing,
+   the type scale and the thumb-reach logic all at once.
+
+   Below 820px nothing changes. Full bleed, exactly as before.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.fd{
+  /* Surround. Near-black rather than pure — pure black against a warm
+     photograph reads as a rendering fault. */
+  background:#080c0a;
+}
+
+.fd__stage{
+  position:absolute; inset:0;
+  /* Every overlay — exit, notice, stamps — anchors to the stage, not the
+     window, so nothing floats out into the surround on a wide screen. */
+}
+
+@media (min-width: 820px){
+  .fd{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px 0;
+  }
+
+  .fd__stage{
+    position:relative;
+    inset:auto;
+    height:min(calc(100dvh - 48px), 920px);
+    /* Phone-shaped. Width follows height so the card keeps its authored
+       framing at any window size. */
+    width:calc(min(calc(100dvh - 48px), 920px) * 9 / 16);
+    min-width:360px;
+    max-width:460px;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 24px 70px rgba(0,0,0,.55);
+    background:var(--fd-ground);
+  }
+
+  /* The viewport and its children size to the column, not the viewport. */
+  .fd__viewport{ height:100% }
+  .fd__card,
+  .fd__end{ height:100% }
+
+  /* Safe-area insets are a phone concern. Inside a desktop column they
+     push the chrome down for no reason. */
+  .fd__top{ padding-top:14px }
+  .fd__segs{ top:7px }
+  .fd__stamp{ top:64px }
+  .fd__passed{ top:58px }
+  .fd__notice{ bottom:12px }
+}
+
+/* ── overlays anchor to the stage ───────────────────────────────────── */
+.fd__notice{ position:absolute }
+.fd__exit{ position:absolute }
+
+/* ── close: back to the directory ───────────────────────────────────────
+   Desktop only. Someone on a laptop arrived here from the site and
+   expects a way back to it; on a phone the feed is where they landed and
+   there is nothing behind it to close to.
+
+   This is NOT the quick exit and must never be confused with it. Quick
+   exit leaves for a neutral site and kills the back button. This returns
+   to the directory, which is still this site.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__close{
+  display:none;
+}
+
+@media (min-width: 820px){
+  .fd__close{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    position:absolute;
+    top:26px;
+    left:calc(50% - min(calc(100dvh - 48px), 920px) * 9 / 32 - 150px);
+    z-index:30;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:100px;
+    padding:9px 15px;
+    color:rgba(255,255,255,.82);
+    font:600 12px var(--fd-body);
+    white-space:nowrap;
+  }
+  .fd__close:hover{
+    background:rgba(255,255,255,.14);
+    color:#fff;
+  }
+}
+
+/* Narrow desktop windows: the column touches the edges and there is no
+   room beside it, so the control tucks inside the stage instead. */
+@media (min-width: 820px) and (max-width: 1120px){
+  .fd__close{
+    left:auto;
+    right:calc(50% + min(calc(100dvh - 48px), 920px) * 9 / 32 + 16px);
+  }
+}
+@media (min-width: 820px) and (max-width: 900px){
+  .fd__close{
+    left:14px; right:auto; top:14px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   STEP 5 — end, empty and error
+   ══════════════════════════════════════════════════════════════════════ */
+
+.fd__end{
+  /* Options are the point of this screen, so it is laid out around them
+     rather than around the heading. */
+  align-items:stretch;
+}
+
+.fd__endmark{
+  font:400 30px var(--fd-display);
+  color:rgba(255,255,255,.3);
+  margin-bottom:12px;
+  text-align:center;
+}
+
+.fd__end h2{
+  font:400 23px/1.28 var(--fd-display);
+  margin:0 0 10px;
+  text-align:center;
+}
+
+.fd__end > p{
+  font:400 13px/1.65 var(--fd-body);
+  color:rgba(255,255,255,.66);
+  margin:0 0 22px;
+  text-align:center;
+}
+
+.fd__fine{
+  font:400 11px/1.5 var(--fd-body);
+  color:rgba(255,255,255,.4);
+  margin:14px 0 0;
+  text-align:center;
+}
+
+.fd__endlink{
+  display:block;
+  margin-top:16px;
+  text-align:center;
+  font:600 12.5px var(--fd-body);
+  color:rgba(255,255,255,.72);
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+
+.fd__done{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:11px;
+  padding:14px;
+  margin:0 0 9px;
+  font:400 12.5px/1.6 var(--fd-body);
+  color:rgba(255,255,255,.82);
+  text-align:center;
+}
+
+/* ── notify ────────────────────────────────────────────────────────────
+   Inline on the card rather than a separate screen. Someone who has just
+   been told there is nobody nearby will not survive a navigation to give
+   you an address.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__notify{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:9px;
+}
+.fd__notify input{
+  flex:1 1 60%;
+  min-width:0;
+  background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:11px;
+  padding:13px 14px;
+  color:#fff;
+  font:400 13.5px var(--fd-body);
+}
+.fd__notify input::placeholder{ color:rgba(255,255,255,.45) }
+.fd__notify input[aria-invalid="true"]{ border-color:#e08d86 }
+.fd__notify button{
+  flex:0 0 auto;
+  background:#fff;
+  color:#14291f;
+  border:0;
+  border-radius:11px;
+  padding:13px 18px;
+  font:600 13px var(--fd-body);
+  min-height:46px;
+}
+.fd__notify button:disabled{ opacity:.6 }
+.fd__err{
+  flex:1 1 100%;
+  font:500 11.5px var(--fd-body);
+  color:#e08d86;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   LOCATION GATE
+   ══════════════════════════════════════════════════════════════════════ */
+
+.fd__gate{
+  position:absolute; inset:0; z-index:40;
+  background:rgba(8,14,11,.88);
+  backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+  display:flex; align-items:flex-end;
+  padding:0;
+}
+@media (min-width: 820px){
+  .fd__gate{ align-items:center; padding:20px }
+}
+
+.fd__gatebox{
+  position:relative;
+  width:100%;
+  background:var(--fd-surface);
+  color:#191c19;
+  border-radius:18px 18px 0 0;
+  padding:20px 18px calc(env(safe-area-inset-bottom, 0px) + 18px);
+  max-height:88%;
+  overflow-y:auto;
+}
+@media (min-width: 820px){
+  .fd__gatebox{ border-radius:16px; padding-bottom:18px }
+}
+
+.fd__gatebox h2{
+  font:400 21px var(--fd-display);
+  margin:0 0 8px;
+}
+.fd__gatebox > p{
+  font:400 13px/1.65 var(--fd-body);
+  color:#4a504a;
+  margin:0 0 18px;
+}
+
+.fd__gateclose{
+  position:absolute; top:12px; right:12px;
+  background:none; border:0; color:#8f948c;
+  font-size:15px; min-width:36px; min-height:36px;
+}
+
+.fd__gateprimary{
+  display:block; width:100%;
+  background:var(--fd-accent); color:var(--fd-accent-text);
+  border:0; border-radius:11px;
+  padding:15px;
+  font:600 14px var(--fd-body);
+  margin-bottom:9px;
+}
+.fd__gateprimary:disabled{ opacity:.65 }
+
+.fd__gatealt{
+  display:block; width:100%;
+  background:none; color:#191c19;
+  border:1px solid #d2d6ce; border-radius:11px;
+  padding:14px;
+  font:600 13.5px var(--fd-body);
+  margin-bottom:9px;
+}
+
+.fd__gateskip{
+  display:block; width:100%;
+  background:none; border:0;
+  color:#6d7370;
+  font:500 12.5px var(--fd-body);
+  padding:12px 0 2px;
+  text-decoration:underline; text-underline-offset:3px;
+}
+
+.fd__gateerr{
+  font:500 12px/1.5 var(--fd-body);
+  color:var(--fd-verified);
+  background:var(--fd-tint);
+  border-radius:9px;
+  padding:10px 12px;
+  margin:4px 0 0;
+}
+
+.fd__gatesearch{
+  width:100%;
+  background:#fff;
+  border:1px solid #d7dbd3;
+  border-radius:11px;
+  padding:12px 14px;
+  font:400 14px var(--fd-body);
+  color:#191c19;
+  margin-bottom:10px;
+}
+
+.fd__citylist{
+  list-style:none; margin:0 0 10px; padding:0;
+  max-height:46vh; overflow-y:auto;
+}
+.fd__citylist li + li{ border-top:1px solid #e6e8e2 }
+.fd__citylist button{
+  display:flex; align-items:center; justify-content:space-between;
+  width:100%; background:none; border:0;
+  padding:13px 2px;
+  font:500 14.5px var(--fd-body);
+  color:#191c19; text-align:left;
+}
+.fd__citylist em{
+  font-style:normal;
+  font:600 11.5px var(--fd-body);
+  color:var(--fd-verified);
+  background:var(--fd-tint);
+  border-radius:100px;
+  padding:3px 9px;
+}
+.fd__citynone{
+  font:400 13px/1.6 var(--fd-body);
+  color:#6d7370;
+  padding:14px 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   STEP 6 — video
+   ══════════════════════════════════════════════════════════════════════ */
+
+.fd__video{
+  object-fit:cover;
+  background:var(--fd-ground);
+}
+.fd__poster{ z-index:1 }
+
+/* ── segment fill ──────────────────────────────────────────────────────
+   A photo segment is filled or it is not — it has no duration, because
+   it waits. Only a playing video fills in real time, and the fill is
+   driven from the video's own clock: a timer drifts against a buffering
+   video and the bar ends up lying about where you are.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__seg.is-now.is-video{ background:rgba(255,255,255,.28) }
+.fd__seg.is-now.is-video::after{ content:none }
+.fd__seg > b{
+  position:absolute; inset:0;
+  background:#fff;
+  border-radius:2px;
+  transform-origin:left center;
+  transform:scaleX(0);
+  /* Short, so it tracks rather than lags, but not zero or it stutters
+     between animation frames. */
+  transition:transform 120ms linear;
+}
+@media (prefers-reduced-motion: reduce){
+  .fd__seg > b{ transition:none }
+}
+
+/* ── sound ─────────────────────────────────────────────────────────────
+   Only rendered on a video segment. Off on every fresh session and the
+   choice never persists — see VideoFrame.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__soundwrap{
+  position:absolute;
+  top:calc(env(safe-area-inset-top, 0px) + 14px);
+  right:64px;           /* clear of quick exit */
+  z-index:9;
+}
+@media (min-width: 820px){
+  .fd__soundwrap{ top:14px }
+}
+.fd__sound{
+  width:34px; height:34px;
+  border-radius:50%;
+  background:rgba(10,16,13,.5);
+  border:1px solid rgba(255,255,255,.25);
+  color:#fff;
+  font-size:14px;
+  display:flex; align-items:center; justify-content:center;
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+.fd__sound.is-on{
+  background:#fff;
+  color:var(--fd-accent);
+  border-color:#fff;
+}
+
+/* ── blocked playback ──────────────────────────────────────────────────
+   Data saver, a slow connection, reduced motion, or a browser that
+   refused. The poster is already showing behind this, so the frame is
+   never empty.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__playwrap{
+  position:absolute; inset:0; z-index:4;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:14px;
+  pointer-events:none;
+}
+.fd__play{
+  pointer-events:auto;
+  width:64px; height:64px;
+  border-radius:50%;
+  background:rgba(255,255,255,.92);
+  color:#14291f;
+  border:0;
+  font-size:22px;
+  padding-left:5px;
+  display:flex; align-items:center; justify-content:center;
+}
+.fd__savedata{
+  pointer-events:none;
+  margin:0;
+  background:rgba(10,16,13,.72);
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:9px;
+  padding:8px 12px;
+  font:400 11.5px/1.45 var(--fd-body);
+  color:rgba(255,255,255,.85);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   STEP 7 — settings sheet, coach overlay
+   ══════════════════════════════════════════════════════════════════════ */
+
+.fd__cog{
+  position:absolute;
+  top:calc(env(safe-area-inset-top, 0px) + 14px);
+  right:110px;                 /* clear of quick exit and the sound button */
+  z-index:9;
+  width:34px; height:34px;
+  border-radius:50%;
+  background:rgba(10,16,13,.5);
+  border:1px solid rgba(255,255,255,.25);
+  color:#fff; font-size:14px;
+  display:flex; align-items:center; justify-content:center;
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+@media (min-width: 820px){ .fd__cog{ top:14px } }
+
+/* ── sheet ─────────────────────────────────────────────────────────── */
+.fd__sheet{ position:absolute; inset:0; z-index:42 }
+.fd__scrimbtn{
+  position:absolute; inset:0;
+  background:rgba(8,14,11,.6);
+  border:0; padding:0;
+  backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+}
+.fd__sheetpanel{
+  position:absolute; left:0; right:0; bottom:0;
+  max-height:90%;
+  overflow-y:auto;
+  background:var(--fd-surface);
+  color:#191c19;
+  border-radius:18px 18px 0 0;
+  padding:12px 16px calc(env(safe-area-inset-bottom, 0px) + 20px);
+}
+@media (min-width: 820px){
+  .fd__sheetpanel{ padding-bottom:20px }
+}
+.fd__grab{
+  width:34px; height:4px; border-radius:4px;
+  background:#d5d9d2; margin:0 auto 12px;
+}
+.fd__sheethead{
+  display:flex; align-items:baseline; justify-content:space-between;
+  margin-bottom:14px;
+}
+.fd__sheethead h2{ font:600 16px var(--fd-body); margin:0 }
+.fd__sheethead button{
+  background:none; border:0;
+  color:var(--fd-verified);
+  font:600 13px var(--fd-body);
+  min-height:34px;
+}
+
+.fd__sheetpanel h3{
+  font:600 9.5px var(--fd-body);
+  letter-spacing:.2em; text-transform:uppercase;
+  color:#8f948c;
+  margin:18px 0 9px;
+}
+
+.fd__row{
+  display:flex; align-items:center; gap:12px;
+  width:100%; text-align:left;
+  background:#fff;
+  border:1px solid #e0e2dc;
+  border-radius:11px;
+  padding:13px 14px;
+  margin-bottom:8px;
+  color:#191c19;
+  text-decoration:none;
+}
+.fd__row i{
+  font-style:normal; font-size:16px;
+  width:22px; text-align:center; color:#6d7370;
+  flex:none;
+}
+.fd__row strong{ display:block; font:600 13.5px var(--fd-body) }
+.fd__row em{ font-style:normal; font:400 11.5px/1.45 var(--fd-body); color:#6d7370 }
+
+.fd__pills{ display:flex; gap:6px; flex-wrap:wrap }
+.fd__pill{
+  border:1px solid #dcdfd8;
+  border-radius:100px;
+  padding:9px 14px;
+  font:500 12.5px var(--fd-body);
+  color:#3f453f;
+  background:var(--fd-surface);
+  min-height:38px;
+}
+.fd__pill.is-on{
+  background:var(--fd-accent);
+  border-color:var(--fd-accent);
+  color:var(--fd-accent-text);
+}
+
+.fd__hint{
+  font:400 11.5px/1.55 var(--fd-body);
+  color:#8f948c;
+  margin:9px 0 0;
+}
+.fd__hint--last{ margin-top:18px }
+
+/* ── coach ─────────────────────────────────────────────────────────────
+   Shown once, ever. Four gestures is one more than most people will
+   absorb, which is exactly why scroll is the default and nothing else is
+   compulsory — this screen is a courtesy, not a dependency.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__coach{
+  position:absolute; inset:0; z-index:60;
+  background:rgba(8,14,11,.9);
+  display:flex; align-items:center;
+  padding:28px 22px;
+}
+.fd__coachin{ width:100%; display:grid; gap:20px }
+.fd__gesture{ display:flex; gap:13px; align-items:flex-start }
+.fd__gesture b{
+  font:600 24px var(--fd-body);
+  width:30px; flex:none; text-align:center;
+  opacity:.9; color:#fff;
+}
+.fd__gesture strong{
+  display:block;
+  font:600 14px var(--fd-body);
+  color:#fff;
+  margin-bottom:2px;
+}
+.fd__gesture span{
+  font:400 12.5px/1.5 var(--fd-body);
+  color:rgba(255,255,255,.72);
+}
+.fd__coachgo{
+  background:#fff; color:var(--fd-ground);
+  border:0; border-radius:100px;
+  padding:14px;
+  font:600 13.5px var(--fd-body);
+  margin-top:4px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   STEP 8 — card body pieces
+
+   Shared across every skin. A product changes tokens and tags, not these.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.fd__vb{
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(255,255,255,.94);
+  color:var(--fd-verified);
+  border-radius:100px;
+  padding:4px 10px;
+  font:600 10px var(--fd-body);
+  margin-bottom:9px;
+}
+
+.fd__name{
+  font:600 23px var(--fd-body);
+  margin:0 0 3px;
+  letter-spacing:-.01em;
+  color:#fff;
+}
+
+.fd__meta{
+  font:400 13px var(--fd-body);
+  color:rgba(255,255,255,.8);
+  margin:0 0 8px;
+}
+
+.fd__bio{
+  font:400 13px/1.5 var(--fd-body);
+  color:rgba(255,255,255,.88);
+  margin:0 0 11px;
+  /* Two lines, then the profile. A card is a decision surface, not a
+     place to read. */
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
+.fd__tags{ display:flex; gap:5px; flex-wrap:wrap; margin-bottom:13px }
+.fd__tag{
+  background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:5px;
+  padding:4px 8px;
+  font:500 10.5px var(--fd-body);
+  color:#fff;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   STEP 9 — Creator
+
+   The only product whose card contents differ. Everything below is
+   additive: no shared rule is overridden, so Escorts and Arrangements
+   are untouched by it.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.fd__posthead{ display:flex; align-items:center; gap:9px; min-width:0 }
+.fd__avatar{
+  width:32px; height:32px; border-radius:10px; flex:none;
+  background:rgba(255,255,255,.2);
+  display:flex; align-items:center; justify-content:center;
+  font:600 13px var(--fd-display);
+  color:#fff;
+}
+.fd__posthead-who{ min-width:0; flex:1 }
+.fd__posthead-who strong{
+  display:block;
+  font:600 13px var(--fd-body);
+  color:#fff;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.fd__posthead-who em{
+  font-style:normal;
+  font:400 10.5px var(--fd-body);
+  color:rgba(255,255,255,.7);
+}
+
+/* Body keeps clear of the rail, or the caption runs under the buttons. */
+.fd__postbody{ padding-right:64px }
+.fd__caption{
+  font:400 13px/1.5 var(--fd-body);
+  color:rgba(255,255,255,.9);
+  margin:0 0 10px;
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
+/* ── rail ──────────────────────────────────────────────────────────────
+   Right-hand column rather than a button row, because that is what every
+   content feed has taught people to expect. Same actions underneath.
+   ──────────────────────────────────────────────────────────────────── */
+.fd__rail{
+  position:absolute;
+  right:10px;
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 96px);
+  z-index:6;
+  display:flex; flex-direction:column; gap:15px; align-items:center;
+}
+@media (min-width: 820px){
+  .fd__rail{ bottom:96px }
+}
+.fd__railbtn{
+  background:none; border:0; padding:0;
+  display:flex; flex-direction:column; align-items:center;
+  color:#fff;
+}
+.fd__railbtn i{
+  width:44px; height:44px; border-radius:50%;
+  background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.22);
+  display:flex; align-items:center; justify-content:center;
+  font-style:normal; font-size:18px;
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+.fd__railbtn[aria-pressed="true"] i{
+  background:var(--fd-save);
+  border-color:var(--fd-save);
+}
+.fd__railbtn small{
+  display:block;
+  font:600 10px var(--fd-body);
+  margin-top:3px;
+  color:rgba(255,255,255,.85);
+}
+
+/* ── locked post ───────────────────────────────────────────────────── */
+.fd__locked{
+  position:absolute; inset:0; z-index:5;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(10,16,13,.5);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+}
+.fd__lockedin{ text-align:center; padding:20px }
+.fd__lockmark{ font-size:26px; margin-bottom:10px; opacity:.9; color:#fff }
+.fd__lockedin strong{
+  display:block; font:600 15px var(--fd-body); color:#fff; margin-bottom:5px;
+}
+.fd__lockedin span{
+  display:block; font:400 12.5px var(--fd-body); color:rgba(255,255,255,.7);
+}
+.fd__lockbtn{
+  margin-top:14px;
+  background:#fff; color:var(--fd-ground);
+  border:0; border-radius:100px;
+  padding:11px 22px;
+  font:600 13px var(--fd-body);
+}

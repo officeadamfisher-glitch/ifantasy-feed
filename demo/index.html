@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14291f">
+<title>Feed — step 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fd-ground:#14291f; --fd-surface:#f4f4f0; --fd-accent:#1d3b2f;
+  --fd-tint:#e3e8e2; --fd-save:#e4566e; --fd-scrim:rgba(10,16,13,.88);
+  --fd-verified:#1d3b2f;
+  --fd-display:'Playfair Display',Georgia,serif;
+  --fd-body:'Inter',-apple-system,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%;overscroll-behavior:none;background:var(--fd-ground)}
+.fd{position:fixed;inset:0;background:#080c0a;color:#fff;font-family:var(--fd-body)}
+.fd__stage{position:absolute;inset:0}
+@media (min-width:820px){
+  .fd{display:flex;align-items:center;justify-content:center;padding:24px 0}
+  .fd__stage{position:relative;inset:auto;
+    height:min(calc(100dvh - 48px),920px);
+    width:calc(min(calc(100dvh - 48px),920px) * 9 / 16);
+    min-width:360px;max-width:460px;border-radius:18px;overflow:hidden;
+    box-shadow:0 24px 70px rgba(0,0,0,.55);background:var(--fd-ground)}
+  .fd__viewport{height:100%}
+  .fd__card,.fd__end{height:100%}
+  .fd__top{padding-top:14px}
+  .fd__segs{top:7px}
+  .fd__stamp{top:64px}
+  .fd__passed{top:58px}
+  .fd__notice{bottom:12px}
+  .dbg,.dbgtog{bottom:14px}
+}
+.fd__close{display:none}
+@media (min-width:820px){
+  .fd__close{display:flex;align-items:center;gap:7px;position:absolute;top:26px;
+    left:calc(50% - min(calc(100dvh - 48px),920px) * 9 / 32 - 150px);z-index:30;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
+    border-radius:100px;padding:9px 15px;color:rgba(255,255,255,.82);
+    font:600 12px var(--fd-body);white-space:nowrap;text-decoration:none}
+  .fd__close:hover{background:rgba(255,255,255,.14);color:#fff}
+}
+@media (min-width:820px) and (max-width:1120px){
+  .fd__close{left:auto;right:calc(50% + min(calc(100dvh - 48px),920px) * 9 / 32 + 16px)}
+}
+@media (min-width:820px) and (max-width:900px){
+  .fd__close{left:14px;right:auto;top:14px}
+}
+.fd__viewport{height:100dvh;overflow-y:scroll;overflow-x:hidden;scroll-snap-type:y mandatory;
+  overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.fd__viewport::-webkit-scrollbar{display:none}
+.fd__card{position:relative;height:100dvh;scroll-snap-align:start;scroll-snap-stop:always;
+  overflow:hidden;background:var(--fd-ground);contain:layout paint;touch-action:pan-y}
+.fd__drag{position:absolute;inset:0;will-change:transform}
+.fd__drag.is-settling{transition:transform 220ms cubic-bezier(.22,.61,.36,1)}
+@media (prefers-reduced-motion:reduce){.fd__drag.is-settling{transition:none}}
+.fd__stamp{position:absolute;top:calc(env(safe-area-inset-top,0px) + 64px);z-index:8;
+  border:3px solid;border-radius:10px;padding:7px 14px;font:800 19px/1 var(--fd-body);
+  letter-spacing:.06em;text-transform:uppercase;pointer-events:none;opacity:0}
+.fd__stamp--save{left:18px;transform:rotate(-11deg);border-color:#7de3a8;color:#7de3a8}
+.fd__stamp--pass{right:18px;transform:rotate(11deg);border-color:rgba(255,255,255,.65);color:rgba(255,255,255,.65)}
+.fd__passed{position:absolute;top:calc(env(safe-area-inset-top,0px) + 58px);left:12px;z-index:8;
+  display:flex;align-items:center;gap:10px;background:rgba(10,16,13,.72);border:1px solid rgba(255,255,255,.2);
+  border-radius:100px;padding:6px 6px 6px 14px;backdrop-filter:blur(8px);font:600 11px var(--fd-body);
+  color:rgba(255,255,255,.8)}
+.fd__undo{background:#fff;color:#14291f;border:0;border-radius:100px;padding:6px 13px;font:600 11px var(--fd-body);min-height:30px}
+.fd__notice{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:25;
+  background:var(--fd-surface);color:#191c19;border-radius:12px;padding:11px 12px;display:flex;gap:10px;
+  align-items:flex-start;box-shadow:0 8px 26px rgba(0,0,0,.24)}
+.fd__notice b{display:block;font:600 12.5px var(--fd-body);margin-bottom:2px}
+.fd__notice p{margin:0;font:400 11.5px/1.45 var(--fd-body);color:#4a504a}
+.fd__notice-x{background:none;border:0;color:#8f948c;font-size:14px;padding:2px 4px;margin-left:auto;min-width:32px;min-height:32px}
+.fd__endopt{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:13px 14px;margin-bottom:9px;color:#fff}
+.fd__endopt i{font-style:normal;font-size:16px;width:22px;text-align:center;opacity:.8}
+.fd__endopt strong{display:block;font:600 13.5px var(--fd-body)}
+.fd__endopt em{font-style:normal;font:400 11.5px var(--fd-body);color:rgba(255,255,255,.58)}
+.circ.save[aria-pressed="true"]{background:var(--fd-save);border-color:var(--fd-save);color:#fff}
+.toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 58px);
+  z-index:40;background:rgba(255,255,255,.96);color:#191c19;border-radius:100px;padding:9px 16px;
+  font:600 12px var(--fd-body);opacity:0;transition:opacity 160ms}
+.toast.on{opacity:1}
+.fd__media{position:absolute;inset:0}
+.fd__frame{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
+  animation:fd-in 140ms ease-out both}
+.fd__frame.is-fading{animation:fd-out 140ms ease-out both;z-index:1}
+@keyframes fd-in{from{opacity:0}to{opacity:1}}
+@keyframes fd-out{from{opacity:1}to{opacity:0}}
+@media (prefers-reduced-motion:reduce){.fd__frame{animation:none}.fd__frame.is-fading{display:none}}
+.fd__segs{position:absolute;top:calc(env(safe-area-inset-top,0px) + 7px);left:12px;right:12px;
+  z-index:6;display:flex;gap:3px;pointer-events:none}
+.fd__seg{flex:1;height:2.5px;border-radius:2px;background:rgba(255,255,255,.28);position:relative;overflow:hidden}
+.fd__seg.is-done,.fd__seg.is-now{background:#fff}
+.fd__seg.is-video::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:rgba(255,255,255,.75)}
+.fd__seg.is-now.is-video{background:rgba(255,255,255,.28)}
+.fd__seg.is-now.is-video::after{content:"";position:absolute;inset:0 100% 0 0;background:#fff;border-radius:2px}
+.fd__taps{position:absolute;top:0;left:0;right:0;bottom:42%;z-index:3;display:flex}
+.fd__tap{background:none;border:0;padding:0;margin:0;-webkit-tap-highlight-color:transparent}
+.fd__tap--prev{flex:0 0 33%}
+.fd__tap--next{flex:1 1 auto}
+.fd__holding{position:absolute;inset:0;background:var(--fd-ground)}
+.fd__scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,
+  rgba(10,16,13,.6) 0%,rgba(10,16,13,0) 22%,rgba(10,16,13,0) 44%,var(--fd-scrim) 100%)}
+.fd__body{z-index:4}
+.fd__top{position:absolute;top:0;left:0;right:0;z-index:5;
+  padding:calc(env(safe-area-inset-top,0px) + 14px) 12px 0;display:flex;align-items:center;gap:8px}
+.fd__chip{background:rgba(255,255,255,.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.2);border-radius:100px;padding:6px 12px;font:600 11px var(--fd-body);color:#fff;white-space:nowrap}
+.fd__spacer{margin-left:auto}
+.fd__exit{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:12px;z-index:20;
+  background:rgba(10,16,13,.55);border:1px solid rgba(255,255,255,.25);border-radius:100px;
+  padding:6px 12px;font:600 11px var(--fd-body);color:#fff;backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);min-height:34px;min-width:44px}
+.fd__body{position:absolute;left:0;right:0;bottom:0;z-index:4;
+  padding:0 14px calc(env(safe-area-inset-bottom,0px) + 18px)}
+.vb{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.94);
+  color:var(--fd-verified);border-radius:100px;padding:4px 10px;font:600 10px var(--fd-body);margin-bottom:9px}
+.nm{font:600 23px var(--fd-body);margin:0 0 3px;letter-spacing:-.01em}
+.mt{font:400 13px var(--fd-body);color:rgba(255,255,255,.8);margin:0 0 8px}
+.bio{font:400 13px/1.5 var(--fd-body);color:rgba(255,255,255,.88);margin:0 0 11px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:13px}
+.tag{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.16);
+  border-radius:5px;padding:4px 8px;font:500 10.5px var(--fd-body)}
+.acts{display:flex;align-items:center;gap:9px}
+.circ{width:46px;height:46px;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:19px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25)}
+.circ.save{background:#fff;color:var(--fd-save);border-color:#fff;font-size:21px}
+.open{flex:1;background:rgba(255,255,255,.95);color:#14291f;border-radius:100px;padding:13px;
+  text-align:center;font:600 13.5px var(--fd-body)}
+.fd__end{position:relative;height:100dvh;scroll-snap-align:start;scroll-snap-stop:always;
+  background:var(--fd-ground);display:flex;flex-direction:column;justify-content:center;
+  text-align:center;padding:34px 22px}
+.fd__end .mk{font:400 30px var(--fd-display);color:rgba(255,255,255,.3);margin-bottom:12px}
+.fd__end h2{font:400 23px/1.28 var(--fd-display);margin:0 0 10px}
+.fd__end p{font:400 13px/1.65 var(--fd-body);color:rgba(255,255,255,.66);margin:0 0 22px}
+.fd__end .opt{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);border-radius:11px;padding:13px 14px;margin-bottom:9px;text-align:left}
+.fd__end .opt i{font-style:normal;font-size:16px;width:22px;text-align:center;opacity:.8}
+.fd__end .opt strong{display:block;font:600 13.5px var(--fd-body)}
+.fd__end .opt span{font:400 11.5px var(--fd-body);color:rgba(255,255,255,.58)}
+.fd__end{align-items:stretch}
+.fd__endmark{font:400 30px var(--fd-display);color:rgba(255,255,255,.3);margin-bottom:12px;text-align:center}
+.fd__endlink{display:block;margin-top:16px;text-align:center;font:600 12.5px var(--fd-body);
+  color:rgba(255,255,255,.72);text-decoration:underline;text-underline-offset:3px}
+.fd__done{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:11px;
+  padding:14px;margin:0 0 9px;font:400 12.5px/1.6 var(--fd-body);color:rgba(255,255,255,.82);text-align:center}
+.fd__notify{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:9px}
+.fd__notify input{flex:1 1 60%;min-width:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  border-radius:11px;padding:13px 14px;color:#fff;font:400 13.5px var(--fd-body)}
+.fd__notify input::placeholder{color:rgba(255,255,255,.45)}
+.fd__notify input[aria-invalid="true"]{border-color:#e08d86}
+.fd__notify button{flex:0 0 auto;background:#fff;color:#14291f;border:0;border-radius:11px;
+  padding:13px 18px;font:600 13px var(--fd-body);min-height:46px}
+.fd__err{flex:1 1 100%;font:500 11.5px var(--fd-body);color:#e08d86}
+.fd__video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:var(--fd-ground)}
+.fd__seg>b{position:absolute;inset:0;background:#fff;border-radius:2px;transform-origin:left center;
+  transform:scaleX(0);transition:transform 120ms linear}
+@media (prefers-reduced-motion:reduce){.fd__seg>b{transition:none}}
+.fd__soundwrap{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:64px;z-index:9}
+@media (min-width:820px){.fd__soundwrap{top:14px}}
+.fd__sound{width:34px;height:34px;border-radius:50%;background:rgba(10,16,13,.5);
+  border:1px solid rgba(255,255,255,.25);color:#fff;font-size:14px;display:flex;
+  align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.fd__sound.is-on{background:#fff;color:var(--fd-accent);border-color:#fff}
+.fd__playwrap{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;pointer-events:none}
+.fd__play{pointer-events:auto;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.92);
+  color:#14291f;border:0;font-size:22px;padding-left:5px;display:flex;align-items:center;justify-content:center}
+.fd__savedata{margin:0;background:rgba(10,16,13,.72);border:1px solid rgba(255,255,255,.16);
+  border-radius:9px;padding:8px 12px;font:400 11.5px/1.45 var(--fd-body);color:rgba(255,255,255,.85)}
+.fd__cog{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:110px;z-index:9;
+  width:34px;height:34px;border-radius:50%;background:rgba(10,16,13,.5);border:1px solid rgba(255,255,255,.25);
+  color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+@media (min-width:820px){.fd__cog{top:14px}}
+.fd__sheet{position:absolute;inset:0;z-index:42}
+.fd__scrimbtn{position:absolute;inset:0;background:rgba(8,14,11,.6);border:0;padding:0;backdrop-filter:blur(2px)}
+.fd__sheetpanel{position:absolute;left:0;right:0;bottom:0;max-height:90%;overflow-y:auto;
+  background:var(--fd-surface);color:#191c19;border-radius:18px 18px 0 0;
+  padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 20px)}
+.fd__grab{width:34px;height:4px;border-radius:4px;background:#d5d9d2;margin:0 auto 12px}
+.fd__sheethead{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.fd__sheethead h2{font:600 16px var(--fd-body);margin:0}
+.fd__sheethead button{background:none;border:0;color:var(--fd-verified);font:600 13px var(--fd-body);min-height:34px}
+.fd__sheetpanel h3{font:600 9.5px var(--fd-body);letter-spacing:.2em;text-transform:uppercase;color:#8f948c;margin:18px 0 9px}
+.fd__row{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;
+  border:1px solid #e0e2dc;border-radius:11px;padding:13px 14px;margin-bottom:8px;color:#191c19;text-decoration:none}
+.fd__row i{font-style:normal;font-size:16px;width:22px;text-align:center;color:#6d7370;flex:none}
+.fd__row strong{display:block;font:600 13.5px var(--fd-body)}
+.fd__row em{font-style:normal;font:400 11.5px/1.45 var(--fd-body);color:#6d7370}
+.fd__pills{display:flex;gap:6px;flex-wrap:wrap}
+.fd__pill{border:1px solid #dcdfd8;border-radius:100px;padding:9px 14px;font:500 12.5px var(--fd-body);
+  color:#3f453f;background:var(--fd-surface);min-height:38px}
+.fd__pill.is-on{background:var(--fd-accent);border-color:var(--fd-accent);color:#fff}
+.fd__hint{font:400 11.5px/1.55 var(--fd-body);color:#8f948c;margin:9px 0 0}
+.fd__coach{position:absolute;inset:0;z-index:60;background:rgba(8,14,11,.9);display:flex;align-items:center;padding:28px 22px}
+.fd__coachin{width:100%;display:grid;gap:20px}
+.fd__gesture{display:flex;gap:13px;align-items:flex-start}
+.fd__gesture b{font:600 24px var(--fd-body);width:30px;flex:none;text-align:center;opacity:.9;color:#fff}
+.fd__gesture strong{display:block;font:600 14px var(--fd-body);color:#fff;margin-bottom:2px}
+.fd__gesture span{font:400 12.5px/1.5 var(--fd-body);color:rgba(255,255,255,.72)}
+.fd__coachgo{background:#fff;color:var(--fd-ground);border:0;border-radius:100px;padding:14px;
+  font:600 13.5px var(--fd-body);margin-top:4px}
+.fd__gate{position:absolute;inset:0;z-index:40;background:rgba(8,14,11,.88);backdrop-filter:blur(3px);
+  display:flex;align-items:flex-end}
+@media (min-width:820px){.fd__gate{align-items:center;padding:20px}}
+.fd__gatebox{position:relative;width:100%;background:var(--fd-surface);color:#191c19;
+  border-radius:18px 18px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom,0px) + 18px);
+  max-height:88%;overflow-y:auto}
+@media (min-width:820px){.fd__gatebox{border-radius:16px;padding-bottom:18px}}
+.fd__gatebox h2{font:400 21px var(--fd-display);margin:0 0 8px}
+.fd__gatebox>p{font:400 13px/1.65 var(--fd-body);color:#4a504a;margin:0 0 18px}
+.fd__gateprimary{display:block;width:100%;background:var(--fd-accent);color:#fff;border:0;
+  border-radius:11px;padding:15px;font:600 14px var(--fd-body);margin-bottom:9px}
+.fd__gatealt{display:block;width:100%;background:none;color:#191c19;border:1px solid #d2d6ce;
+  border-radius:11px;padding:14px;font:600 13.5px var(--fd-body);margin-bottom:9px}
+.fd__gateskip{display:block;width:100%;background:none;border:0;color:#6d7370;
+  font:500 12.5px var(--fd-body);padding:12px 0 2px;text-decoration:underline;text-underline-offset:3px}
+.fd__gateerr{font:500 12px/1.5 var(--fd-body);color:var(--fd-verified);background:var(--fd-tint);
+  border-radius:9px;padding:10px 12px;margin:4px 0 0}
+.fd__gatesearch{width:100%;background:#fff;border:1px solid #d7dbd3;border-radius:11px;
+  padding:12px 14px;font:400 14px var(--fd-body);color:#191c19;margin-bottom:10px}
+.fd__citylist{list-style:none;margin:0 0 10px;padding:0;max-height:46vh;overflow-y:auto}
+.fd__citylist li+li{border-top:1px solid #e6e8e2}
+.fd__citylist button{display:flex;align-items:center;justify-content:space-between;width:100%;
+  background:none;border:0;padding:13px 2px;font:500 14.5px var(--fd-body);color:#191c19;text-align:left}
+.fd__citylist em{font-style:normal;font:600 11.5px var(--fd-body);color:var(--fd-verified);
+  background:var(--fd-tint);border-radius:100px;padding:3px 9px}
+.bandbtns{display:flex;gap:6px;position:absolute;right:10px;bottom:52px;z-index:35;flex-wrap:wrap;max-width:180px;justify-content:flex-end}
+.bandbtns button{background:rgba(10,16,13,.8);border:1px solid rgba(255,255,255,.2);color:#cfe0d6;
+  border-radius:7px;padding:6px 9px;font:600 9.5px var(--fd-body)}
+.bandbtns button.on{background:#fff;color:#14291f}
+.statebtns{display:flex;gap:6px;position:absolute;left:10px;top:10px;z-index:35}
+.statebtns button{background:rgba(10,16,13,.8);border:1px solid rgba(255,255,255,.2);color:#cfe0d6;
+  border-radius:7px;padding:6px 9px;font:600 9.5px var(--fd-body)}
+.statebtns button.on{background:#fff;color:#14291f}
+.fd__end .fine{font:400 11px/1.5 var(--fd-body);color:rgba(255,255,255,.4);margin-top:14px}
+.fd__banner{position:absolute;left:10px;right:10px;top:calc(env(safe-area-inset-top,0px) + 58px);
+  z-index:7;background:var(--fd-surface);color:#191c19;border-radius:12px;padding:11px 12px;
+  display:flex;gap:10px;align-items:center;text-align:left}
+.fd__banner p{font:400 11.4px/1.45 var(--fd-body);margin:0;flex:1;color:#4a504a}
+.fd__banner b{font:600 12px var(--fd-body);color:#191c19;display:block;margin-bottom:2px}
+.fd__banner .x{font-size:15px;color:#8f948c;padding:4px 6px}
+/* debug */
+.dbg{position:absolute;left:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:30;
+  background:rgba(10,16,13,.78);border:1px solid rgba(255,255,255,.2);border-radius:8px;
+  padding:7px 10px;font:600 10px var(--fd-body);color:#cfe0d6;letter-spacing:.04em;backdrop-filter:blur(6px)}
+.dbg.off{display:none}
+.dbgtog{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:30;
+  background:rgba(10,16,13,.78);border:1px solid rgba(255,255,255,.2);border-radius:8px;
+  padding:7px 10px;font:600 10px var(--fd-body);color:#cfe0d6}
+button{font:inherit;cursor:pointer;border:0}
+:focus-visible{outline:2px solid #7de3a8;outline-offset:2px;border-radius:4px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="fd" id="fd">
+  <h1 class="sr">Verified people near you</h1>
+  <a class="fd__close" href="#directory"><span aria-hidden="true">&larr;</span> Back to the directory</a>
+  <div class="fd__stage" id="stage">
+    <div class="fd__viewport" id="vp" role="list" aria-label="Feed"></div>
+    <button class="fd__cog" id="cog" aria-label="Feed settings">&#9881;</button>
+    <button class="fd__exit" id="exit" aria-label="Quick exit — leave this site immediately">Exit</button>
+    <div class="dbg" id="dbg">—</div>
+    <button class="dbgtog" id="dbgtog">debug</button>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   STEP 1 DEMO — behaviour prototype
+
+   Mirrors src/FeedProvider.tsx and src/FeedViewport.tsx in plain JS so it
+   runs on a phone with no build step. The React source is the real thing;
+   this exists so the scroll can be felt before anything is wired up.
+
+   In scope: scroll-snap, card mounting window, active-card detection,
+   end card, quick exit, first-run banner.
+   Not in scope: gestures, video, save/pass. Steps 2–6.
+   ══════════════════════════════════════════════════════════════════════ */
+
+var MOUNT_RADIUS = 2;
+
+/* Stand-in media. Gradients, not photographs — nothing stock ever goes
+   live and nothing stock belongs in a prototype either. */
+var GRADS = [
+  ['#4a5a52','#2e3a36','#1a2420'], ['#5b5044','#3a332c','#211d19'],
+  ['#44505e','#2b333c','#1a1f24'], ['#574a5c','#382f3c','#201b23'],
+  ['#4f5a46','#333b2e','#1d231b'], ['#5a4a4a','#3a2f2f','#231b1b']
+];
+var AREAS = ['Shoreditch','Camden','Soho','Islington','Hackney','Mayfair','Clapham','Fulham','Brixton'];
+var BANDS = ['under 1 mile','under 5 miles','under 5 miles','under 5 miles','under 10 miles'];
+var TAGS  = [['Incall','Outcall'],['Incall'],['Outcall','English, Spanish'],['Incall','Outcall','English']];
+
+/* Media sets vary in length so the segment bar can be judged honestly.
+   Item 2 and 6 carry a video segment — it renders its notch and its
+   poster; playback is step 6. */
+var CLIP   = 'media/clip.mp4';
+var POSTER = 'media/poster.jpg';
+
+/* Sound is a module-level variable, deliberately. Not localStorage, not
+   sessionStorage — a fresh tab is a fresh decision. Someone who turns
+   sound on at home and is outed on a bus three weeks later was failed by
+   the software. */
+var SOUND_ON = false;
+var AUTOPLAY_PREF = 'wifi';
+
+function canAutoplay(){
+  if (AUTOPLAY_PREF === 'never') return false;
+  if (window.matchMedia('(prefers-reduced-motion:reduce)').matches) return false;
+  var c = navigator.connection;
+  if (c && c.saveData) return false;
+  /* Unknown counts as fine — most desktop browsers report nothing, and
+     refusing there is worse than the occasional wrong guess. */
+  if (c && c.effectiveType && c.effectiveType !== '4g') return false;
+  return true;
+}
+
+var SETS = [
+  [['photo'],['photo'],['photo'],['photo']],
+  [['photo'],['photo']],
+  [['photo'],['photo'],['video'],['photo']],
+  [['photo']],
+  [['photo'],['photo'],['photo']],
+  [['photo'],['video']],
+  [['photo'],['photo'],['photo'],['photo'],['photo']],
+  [['photo'],['photo']],
+  [['photo'],['photo'],['photo']]
+];
+
+var ITEMS = [];
+for (var i = 0; i < 9; i++) {
+  ITEMS.push({
+    media: SETS[i].map(function(m,k){ return { type:m[0], seg:k, durationMs: m[0] === 'video' ? 8000 : undefined }; }),
+    id: 'p' + i,
+    name: 'Provider ' + String.fromCharCode(65 + i),
+    area: AREAS[i % AREAS.length],
+    band: BANDS[i % BANDS.length],
+    verified: true,
+    verifiedAt: '14 Mar',
+    activeToday: i % 3 === 0,
+    bio: 'Two lines of her own description, written by her and cut here. The full text sits on the profile.',
+    tags: TAGS[i % TAGS.length],
+    grad: GRADS[i % GRADS.length]
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DECISIONS — saves and passes, device-local
+
+   No network code lives in here and none ever should. Passes never leave
+   the device: a record of who was rejected and how often is precisely the
+   data that damages the people this platform exists to protect.
+   ══════════════════════════════════════════════════════════════════════ */
+var PRODUCT = 'escorts';
+var K = {
+  saves:  'ifantasy.feed.saves.'  + PRODUCT,
+  passes: 'ifantasy.feed.passes.' + PRODUCT,
+  notice: 'ifantasy.feed.savednotice.' + PRODUCT
+};
+
+/* localStorage throws in private browsing, with cookies blocked, and on a
+   full quota. An uncaught throw here takes the feed down at the exact
+   moment someone taps save. */
+var mem = {}, storeOk = (function(){
+  try { localStorage.setItem('__fd__','1'); localStorage.removeItem('__fd__'); return true; }
+  catch(e){ return false; }
+})();
+function getList(k){
+  try { var raw = storeOk ? localStorage.getItem(k) : mem[k];
+        var v = raw ? JSON.parse(raw) : []; return Array.isArray(v) ? v : []; }
+  catch(e){ return []; }
+}
+function setList(k, v){
+  mem[k] = JSON.stringify(v);
+  if (!storeOk) return;
+  try { localStorage.setItem(k, mem[k]); } catch(e){}
+}
+
+var savesArr  = getList(K.saves);
+var passesArr = getList(K.passes);
+/* Snapshot: pages are filtered against the passes that existed when the
+   session started, never against the live set. Filtering live removes a
+   card the instant it is passed, which moves the scroll under the thumb. */
+var hidden = {}; passesArr.forEach(function(id){ hidden[id] = 1; });
+
+function isSaved(id){ return savesArr.indexOf(id) !== -1; }
+function isPassed(id){ return passesArr.indexOf(id) !== -1; }
+function doSave(id){ if (isSaved(id)) return; savesArr.unshift(id); setList(K.saves, savesArr); }
+function doUnsave(id){ savesArr = savesArr.filter(function(s){ return s !== id; }); setList(K.saves, savesArr); }
+function doPass(id){ if (isPassed(id)) return; passesArr.push(id); setList(K.passes, passesArr); }
+function doUndoPass(id){
+  passesArr = passesArr.filter(function(p){ return p !== id; });
+  setList(K.passes, passesArr); delete hidden[id];
+}
+function doFlush(){ passesArr = []; setList(K.passes, passesArr); hidden = {}; location.reload(); }
+
+var vp = document.getElementById('vp');
+var activeIndex = 0;
+
+/* Distance ladder. Widening is the first thing a short feed should offer. */
+var LADDER = ['under 1 mile','under 5 miles','under 10 miles','anywhere'];
+var BAND = 'under 5 miles';
+function nextBand(b){ var i = LADDER.indexOf(b); return (i >= 0 && i < LADDER.length - 1) ? LADDER[i+1] : null; }
+var WIDER_TOTAL = 14;          /* pretend the server sent one */
+
+/* ── viewer origin ──────────────────────────────────────────────────────
+   Client-sent, never IP-derived. Rounded to two decimal places (~1.1km)
+   before it is stored or sent: bands are 1, 5 and 10 miles, so a
+   kilometre of slop changes nothing, and a precise log of where people
+   were while browsing this site has no operational purpose.
+   Never requested on load — only when a distance is chosen.
+   ──────────────────────────────────────────────────────────────────── */
+var OKEY = 'ifantasy.feed.origin.' + PRODUCT;
+function coarse(n){ return Math.round(n * 100) / 100; }
+var ORIGIN = (function(){
+  try { var r = localStorage.getItem(OKEY); return r ? JSON.parse(r) : null; } catch(e){ return null; }
+})();
+function setOrigin(o){
+  ORIGIN = o;
+  try { o ? localStorage.setItem(OKEY, JSON.stringify(o)) : localStorage.removeItem(OKEY); } catch(e){}
+}
+var CITIES = [
+  { id:'london', name:'London', lat:51.51, lng:-0.13, total:34 },
+  { id:'manchester', name:'Manchester', lat:53.48, lng:-2.24, total:9 },
+  { id:'birmingham', name:'Birmingham', lat:52.48, lng:-1.90, total:6 },
+  { id:'leeds', name:'Leeds', lat:53.80, lng:-1.55, total:4 },
+  { id:'glasgow', name:'Glasgow', lat:55.86, lng:-4.25, total:3 },
+  { id:'bristol', name:'Bristol', lat:51.45, lng:-2.59, total:2 }
+];
+var gateView = 'ask', gateStatus = 'none', gateQuery = '';
+var VIEW = 'feed';             /* feed | empty | error — demo switcher */
+
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+function cardHTML(it, i, n){
+  return '<article class="fd__card" data-index="' + i + '" role="listitem"'
+    + ' aria-setsize="' + n + '" aria-posinset="' + (i+1) + '">'
+    + '<div class="fd__drag" data-drag>'
+    + '<div class="fd__media" data-media></div>'
+    + (it.media.length > 1
+        ? '<div class="fd__segs" data-segs aria-hidden="true">' + it.media.map(function(m,k){
+            return '<span class="fd__seg' + (k===0?' is-now':'') + (m.type==='video'?' is-video':'') + '"></span>';
+          }).join('') + '</div>'
+        : '')
+    + '<div class="fd__scrim"></div>'
+    + (it.media.length > 1
+        ? '<div class="fd__taps" data-taps>'
+          + '<button class="fd__tap fd__tap--prev" data-dir="-1" data-drag-ok aria-label="Previous photo" tabindex="-1"></button>'
+          + '<button class="fd__tap fd__tap--next" data-dir="1" data-drag-ok aria-label="Next photo" tabindex="-1"></button>'
+          + '</div>'
+        : '')
+    + '<div class="fd__top"><span class="fd__chip">' + esc(it.band) + '</span><span class="fd__spacer"></span></div>'
+    + '<div class="fd__body">'
+      + '<span class="vb">&#10003; Verified ' + esc(it.verifiedAt) + '</span>'
+      + '<p class="nm">' + esc(it.name) + '</p>'
+      + '<p class="mt">' + esc(it.area) + ' &middot; ' + esc(it.band)
+        + (it.activeToday ? ' &middot; active today' : '') + '</p>'
+      + '<p class="bio">' + esc(it.bio) + '</p>'
+      + '<div class="tags">' + it.tags.map(function(t){
+          return '<span class="tag">' + esc(t) + '</span>'; }).join('') + '</div>'
+      + '<div class="acts">'
+        + '<button class="circ" data-act="pass" aria-label="Pass">&#10005;</button>'
+        + '<button class="open" data-act="open">View profile</button>'
+        + '<button class="circ save" data-act="save" aria-pressed="' + (isSaved(it.id) ? 'true' : 'false') + '" aria-label="Save">&#9829;</button>'
+      + '</div>'
+    + '</div>'
+    + '<div class="fd__passed" data-passed hidden><span>Passed</span>'
+      + '<button class="fd__undo" data-act="undo" data-no-drag>Undo</button></div>'
+    + '<span class="fd__stamp fd__stamp--save" data-stamp="save" aria-hidden="true">Saved</span>'
+    + '<span class="fd__stamp fd__stamp--pass" data-stamp="pass" aria-hidden="true">Pass</span>'
+    + '</div></article>';
+}
+
+function optHTML(icon, title, note, attr){
+  return '<button class="fd__endopt" ' + attr + ' data-no-drag><i>' + icon + '</i><span>'
+    + '<strong>' + title + '</strong>'
+    + (note ? '<em>' + note + '</em>' : '') + '</span></button>';
+}
+
+function notifyHTML(){
+  if (notifyDone) return '<p class="fd__done">We&rsquo;ll tell you when someone verifies nearby. Nothing else.</p>';
+  if (!notifyOpen) return optHTML('&#9906;','Tell me when someone new verifies','Near you. No other email, ever.','data-notify');
+  return '<div class="fd__notify" data-no-drag>'
+    + '<input id="fd-notify" type="email" inputmode="email" placeholder="you@example.com"'
+      + (notifyBad ? ' aria-invalid="true"' : '') + '>'
+    + '<button data-notify-send>Tell me</button>'
+    + (notifyBad ? '<span class="fd__err">That address doesn&rsquo;t look right. Try again.</span>' : '')
+    + '</div>';
+}
+
+var notifyOpen = false, notifyDone = false, notifyBad = false;
+
+function endHTML(total){
+  var wider = nextBand(BAND);
+  return '<div class="fd__end" data-index="' + ITEMS.length + '">'
+    + '<div class="fd__endmark">&mdash;</div>'
+    + '<h2>' + (wider
+        ? 'That&rsquo;s everyone verified ' + BAND + '.'
+        : 'That&rsquo;s everyone verified, anywhere.') + '</h2>'
+    + '<p>' + total + ' ' + (total === 1 ? 'person' : 'people')
+      + '. We don&rsquo;t pad the feed with listings nobody has checked.</p>'
+    + (wider ? optHTML('&#8853;','Widen to ' + wider,
+        (typeof WIDER_TOTAL === 'number' ? 'Another ' + WIDER_TOTAL + ' verified' : ''),
+        'data-widen') : '')
+    + (passesArr.length
+        ? optHTML('&#8635;','Bring back the ones you passed',
+            passesArr.length + ' hidden. Clears your passes, keeps your saves.','data-flush')
+        : '')
+    + notifyHTML()
+    + '<p class="fine">Order rotates daily. Position here is never for sale.</p>'
+    + '</div>';
+}
+
+function emptyHTML(){
+  var wider = nextBand(BAND);
+  return '<div class="fd__end" data-index="0">'
+    + '<div class="fd__endmark">&mdash;</div>'
+    + '<h2>Nobody verified here yet.</h2>'
+    + '<p>We&rsquo;re new, and we won&rsquo;t pad the directory with listings we haven&rsquo;t checked. '
+      + 'Everyone who appears here has proved who they are first.</p>'
+    + (wider ? optHTML('&#8853;','Try ' + wider,
+        (typeof WIDER_TOTAL === 'number' ? WIDER_TOTAL + ' verified' : ''), 'data-widen') : '')
+    + notifyHTML()
+    + '<a class="fd__endlink" href="#directory">Browse the full directory instead</a>'
+    + '</div>';
+}
+
+function errorHTML(){
+  return '<div class="fd__end" data-index="0">'
+    + '<div class="fd__endmark">&mdash;</div>'
+    + '<h2>We can&rsquo;t reach the feed right now.</h2>'
+    /* Never "something went wrong" — it says nothing and implies the
+       person might have caused it. */
+    + '<p>This is on us, not you. It is usually over in a moment.</p>'
+    + optHTML('&#8635;','Try again','','data-retry')
+    + '<a class="fd__endlink" href="#directory">Open the directory</a>'
+    + '</div>';
+}
+
+/* Render every card shell up front. Scroll geometry has to be real —
+   swapping cards for spacers makes the scrollbar jump and breaks snap
+   points on a fast flick. Only the media inside the window mounts. */
+/* Passes from earlier sessions are filtered out as the list is built. */
+var TOTAL = ITEMS.length;
+ITEMS = ITEMS.filter(function(it){ return !hidden[it.id]; });
+ITEMS.forEach(function(it,i){ it.idx = i; });
+
+function render(){
+  if (VIEW === 'empty') { vp.innerHTML = emptyHTML(); return; }
+  if (VIEW === 'error') { vp.innerHTML = errorHTML(); return; }
+  vp.innerHTML = ITEMS.map(function(it,i){ return cardHTML(it,i,ITEMS.length); }).join('')
+               + endHTML(ITEMS.length);
+}
+render();
+
+/* First-run banner, shown once. */
+if (!localStorage.getItem('ifantasy.feed.coached')) {
+  var b = document.createElement('div');
+  b.className = 'fd__banner';
+  b.innerHTML = '<div style="font-size:15px">&#8862;</div>'
+    + '<p><b>You&rsquo;re in the feed</b>Prefer the full directory with filters? Tap here.</p>'
+    + '<button class="x" aria-label="Dismiss">&#10005;</button>';
+  vp.querySelector('.fd__card').appendChild(b);
+  b.querySelector('.x').addEventListener('click', function(e){
+    e.stopPropagation();
+    localStorage.setItem('ifantasy.feed.coached','1');
+    b.remove();
+  });
+}
+
+/* Per-card segment index. Reset happens when a card leaves the mount
+   window, not when it stops being active — scrolling one past and back is
+   a common accident and should return you where you were. */
+var segAt = ITEMS.map(function(){ return 0; });
+
+function shade(g, k, type){
+  /* Each segment gets a slightly different stop so advancing is visible. */
+  var lift = k * 9;
+  function adj(hex){
+    var n = parseInt(hex.slice(1),16);
+    var r = Math.min(255,((n>>16)&255)+lift), gg = Math.min(255,((n>>8)&255)+lift), b = Math.min(255,(n&255)+lift);
+    return 'rgb(' + r + ',' + gg + ',' + b + ')';
+  }
+  return 'linear-gradient(150deg,' + adj(g[0]) + ' 0%,' + adj(g[1]) + ' 46%,' + adj(g[2]) + ' 100%)';
+}
+
+/* Exactly one video element is ever playing: the active card's current
+   segment. Everything else is paused, rewound and torn down. Get this
+   wrong and the phone gets hot, the battery goes, and on cellular it is
+   someone else's money. */
+function stopAllVideo(except){
+  vp.querySelectorAll('video').forEach(function(v){
+    if (v === except) return;
+    try { v.pause(); v.currentTime = 0; } catch(e){}
+    v.remove();
+  });
+}
+
+function paintMedia(card, i){
+  var host = card.querySelector('[data-media]');
+  var it = ITEMS[i], k = segAt[i], m = it.media[k];
+  var old = host.querySelector('.fd__frame:not(.is-fading)');
+  if (old) { old.classList.add('is-fading'); setTimeout(function(){ if(old.parentNode) old.remove(); }, 160); }
+
+  var el;
+  if (m.type === 'video') {
+    el = document.createElement('video');
+    el.className = 'fd__frame fd__video';
+    el.src = CLIP; el.poster = POSTER;
+    el.muted = !SOUND_ON; el.loop = true; el.playsInline = true;
+    el.setAttribute('playsinline',''); el.preload = 'none';
+    el.setAttribute('aria-hidden','true');
+    host.appendChild(el);
+    stopAllVideo(el);
+
+    if (i === activeIndex && canAutoplay()) {
+      var pr = el.play();
+      if (pr && pr.catch) pr.catch(function(){ showBlocked(card, el, true); });
+    } else if (i === activeIndex) {
+      showBlocked(card, el, false);
+    }
+    trackProgress(card, el, m);
+  } else {
+    el = document.createElement('div');
+    el.className = 'fd__frame';
+    el.style.background = shade(it.grad, k, m.type);
+    el.innerHTML = '<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);'
+      + 'font:600 9px var(--fd-body);letter-spacing:.28em;color:rgba(255,255,255,.17)">PHOTOGRAPH</span>';
+    host.appendChild(el);
+    stopAllVideo(null);
+  }
+
+  var segs = card.querySelectorAll('[data-segs] .fd__seg');
+  for (var s2 = 0; s2 < segs.length; s2++) {
+    segs[s2].classList.toggle('is-done', s2 < k);
+    segs[s2].classList.toggle('is-now', s2 === k);
+    var fill = segs[s2].querySelector('b');
+    if (s2 === k && m.type === 'video') {
+      if (!fill) { fill = document.createElement('b'); segs[s2].appendChild(fill); }
+      fill.style.transform = 'scaleX(0)';
+    } else if (fill) { fill.remove(); }
+  }
+
+  paintSound(card, m.type === 'video');
+}
+
+function paintSound(card, show){
+  var w = card.querySelector('.fd__soundwrap');
+  if (!show) { if (w) w.remove(); return; }
+  if (w) return;
+  w = document.createElement('div');
+  w.className = 'fd__soundwrap';
+  w.innerHTML = '<button class="fd__sound' + (SOUND_ON ? ' is-on' : '') + '" data-sound'
+    + ' aria-pressed="' + SOUND_ON + '" data-no-drag aria-label="'
+    + (SOUND_ON ? 'Mute' : 'Unmute') + '">' + (SOUND_ON ? '&#9834;' : '&#8856;') + '</button>';
+  card.querySelector('[data-drag]').appendChild(w);
+}
+
+function showBlocked(card, el, refused){
+  var host = card.querySelector('[data-media]');
+  if (host.querySelector('.fd__playwrap')) return;
+  var w = document.createElement('div');
+  w.className = 'fd__playwrap';
+  w.innerHTML = '<button class="fd__play" data-play aria-label="Play video">&#9654;</button>'
+    + (refused ? '' : '<p class="fd__savedata">Video paused to save data. Tap to play.</p>');
+  host.appendChild(w);
+}
+
+/* Fill from the video's own clock, not a timer — a timer drifts against a
+   buffering video and the bar ends up lying about where you are. */
+function trackProgress(card, el, m){
+  var seg = card.querySelector('[data-segs] .fd__seg.is-now b');
+  if (!seg) return;
+  function tick(){
+    if (!el.isConnected) return;
+    var d = el.duration || (m.durationMs ? m.durationMs / 1000 : 0);
+    if (d > 0) seg.style.transform = 'scaleX(' + Math.min(1, el.currentTime / d) + ')';
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+function step(i, dir){
+  var n = ITEMS[i].media.length;
+  if (n <= 1) return;
+  segAt[i] = ((segAt[i] + dir) % n + n) % n;   /* wraps at both ends */
+  paintMedia(vp.querySelector('[data-index="' + i + '"]'), i);
+}
+
+/* Mount window. Media renders only within MOUNT_RADIUS of the active card. */
+function applyWindow(){
+  var cards = vp.querySelectorAll('.fd__card');
+  var mounted = 0;
+  for (var i = 0; i < cards.length; i++) {
+    var host = cards[i].querySelector('[data-media]');
+    var within = Math.abs(i - activeIndex) <= MOUNT_RADIUS;
+    if (within) {
+      mounted++;
+      if (!host.firstChild) paintMedia(cards[i], i);
+    } else if (host.firstChild) {
+      host.querySelectorAll('video').forEach(function(v){
+        try { v.pause(); v.currentTime = 0; } catch(e){}
+      });
+      host.innerHTML = '';
+      var sw = cards[i].querySelector('.fd__soundwrap'); if (sw) sw.remove();
+      segAt[i] = 0;                /* reset on leaving the window */
+      var segs = cards[i].querySelectorAll('[data-segs] .fd__seg');
+      for (var s3 = 0; s3 < segs.length; s3++) {
+        segs[s3].classList.toggle('is-now', s3 === 0);
+        segs[s3].classList.remove('is-done');
+      }
+    }
+  }
+  /* Pause any video on a card that is no longer the snap target. */
+  vp.querySelectorAll('.fd__card').forEach(function(cd){
+    var idx = Number(cd.getAttribute('data-index'));
+    cd.querySelectorAll('video').forEach(function(v){
+      if (idx !== activeIndex) { try { v.pause(); v.currentTime = 0; } catch(e){} }
+      else if (canAutoplay() && v.paused) { var pp = v.play(); if (pp && pp.catch) pp.catch(function(){}); }
+    });
+  });
+
+  var it = ITEMS[activeIndex];
+  document.getElementById('dbg').textContent =
+    'card ' + (activeIndex + 1) + '/' + ITEMS.length
+    + '  ·  seg ' + (segAt[activeIndex] + 1) + '/' + it.media.length
+    + '  ·  mounted ' + mounted
+    + '  ·  saved ' + savesArr.length + '  ·  passed ' + passesArr.length;
+}
+
+/* Tap zones. Delegated, so cards mounted later are covered. */
+vp.addEventListener('click', function(e){
+  var t = e.target.closest ? e.target.closest('.fd__tap') : null;
+  if (!t) return;
+  /* A drag that moved is not a tap. Without this, every swipe also
+     advances a photograph on release. */
+  if (suppressTap) { suppressTap = false; return; }
+  var card = t.closest('.fd__card');
+  var i = Number(card.getAttribute('data-index'));
+  step(i, Number(t.getAttribute('data-dir')));
+  applyWindow();
+});
+
+/* Active-card detection. IntersectionObserver, not a scroll handler — a
+   scroll handler fires every frame and forces layout; the observer fires
+   once per crossing and costs nothing. */
+var io;
+function rewire(){
+  if (io) io.disconnect();
+  io = new IntersectionObserver(obsFn, { root: vp, threshold: 0.6 });
+  vp.querySelectorAll('[data-index]').forEach(function(el){ io.observe(el); });
+  activeIndex = 0;
+  if (VIEW === 'feed') { applyWindow(); for (var q = 0; q < ITEMS.length; q++) refreshCard(q); }
+}
+
+var obsFn = function(entries){
+  for (var k = 0; k < entries.length; k++) {
+    if (!entries[k].isIntersecting) continue;
+    var idx = Number(entries[k].target.getAttribute('data-index'));
+    if (!isNaN(idx) && idx !== activeIndex) { activeIndex = Math.min(idx, ITEMS.length - 1); applyWindow(); }
+  }
+};
+
+rewire();
+
+/* ══════════════════════════════════════════════════════════════════════
+   GESTURE LAYER
+   touch-action:pan-y on the card hands vertical panning to the browser —
+   native scroll-snap, momentum and interruption for free — and reserves
+   horizontal for us. When the browser claims the gesture as a scroll it
+   sends pointercancel, which is the signal to drop the drag.
+   ══════════════════════════════════════════════════════════════════════ */
+var COMMIT_RATIO = 0.25, COMMIT_VELOCITY = 0.5, AXIS_LOCK = 10, RESISTANCE = 0.35;
+var REDUCED = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+var drag = null, suppressTap = false;
+
+function cardParts(i){
+  var card = vp.querySelector('[data-index="' + i + '"]');
+  if (!card) return null;
+  return {
+    card: card,
+    drag: card.querySelector('[data-drag]'),
+    save: card.querySelector('[data-stamp="save"]'),
+    pass: card.querySelector('[data-stamp="pass"]')
+  };
+}
+
+/* Measure the card, never the window. On desktop the card is a ~440px
+   column inside a wide page, and a window-based threshold would make a
+   swipe there need three times the travel it needs on a phone. */
+function cardWidth(){
+  var st = document.getElementById('stage');
+  return (st && st.offsetWidth) || window.innerWidth;
+}
+
+function paintDrag(p, dx){
+  var limit = cardWidth() * COMMIT_RATIO;
+  var prog = Math.max(-1, Math.min(1, dx / limit));
+  p.drag.style.transform = dx ? 'translate3d(' + dx + 'px,0,0)' : '';
+  p.save.style.opacity = Math.max(0, prog);
+  p.pass.style.opacity = Math.max(0, -prog);
+}
+
+function springBack(p){
+  p.drag.classList.add('is-settling');
+  paintDrag(p, 0);
+  setTimeout(function(){ p.drag.classList.remove('is-settling'); }, REDUCED ? 0 : 220);
+}
+
+var toastEl = null, toastT = null;
+function toast(msg){
+  if (!toastEl) { toastEl = document.createElement('div'); toastEl.className = 'toast';
+    document.getElementById('stage').appendChild(toastEl); }
+  toastEl.textContent = msg;
+  toastEl.classList.add('on');
+  clearTimeout(toastT);
+  toastT = setTimeout(function(){ toastEl.classList.remove('on'); }, 1100);
+}
+
+function advance(i){
+  var next = vp.querySelector('[data-index="' + (i + 1) + '"]');
+  if (next) next.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
+}
+
+function refreshCard(i){
+  var card = vp.querySelector('[data-index="' + i + '"]'); if (!card) return;
+  var id = ITEMS[i].id;
+  var heart = card.querySelector('[data-act="save"]');
+  if (heart) heart.setAttribute('aria-pressed', isSaved(id) ? 'true' : 'false');
+  var mark = card.querySelector('[data-passed]');
+  if (mark) mark.hidden = !isPassed(id);
+}
+
+function savedNotice(){
+  if (storeOk && localStorage.getItem(K.notice) === '1') return;
+  if (document.querySelector('.fd__notice')) return;
+  var n = document.createElement('div');
+  n.className = 'fd__notice';
+  n.setAttribute('role','status');
+  n.innerHTML = '<div><b>' + (storeOk ? 'Saved to this device' : 'Saved for this visit only') + '</b>'
+    + '<p>' + (storeOk
+        ? 'Sign in when accounts open and we will keep them.'
+        : 'Private browsing means these will not be here when you close the tab.') + '</p></div>'
+    + '<button class="fd__notice-x" aria-label="Dismiss">&#10005;</button>';
+  document.getElementById('stage').appendChild(n);
+  n.querySelector('.fd__notice-x').addEventListener('click', function(){
+    try { localStorage.setItem(K.notice,'1'); } catch(e){}
+    n.remove();
+  });
+}
+
+function commit(i, action){
+  var p = cardParts(i); if (!p) return;
+  var id = ITEMS[i].id;
+
+  if (action === 'save') {
+    doSave(id);
+    if (navigator.vibrate) { try { navigator.vibrate(10); } catch(e) {} }
+    toast('Saved');
+    savedNotice();
+  } else {
+    doPass(id);
+    /* Nothing is reported. No pass event, no count, nowhere. */
+    toast('Passed — bring them back any time');
+  }
+  refreshCard(i);
+
+  /* The card is never removed. It sits in a scroll-snap list, and removing
+     an element mid-scroll changes the geometry under the person's thumb. */
+  springBack(p);
+  setTimeout(function(){ advance(i); }, REDUCED ? 0 : 120);
+}
+
+vp.addEventListener('pointerdown', function(e){
+  var card = e.target.closest && e.target.closest('.fd__card');
+  if (!card) return;
+  var i = Number(card.getAttribute('data-index'));
+  if (i !== activeIndex) return;
+  /* Never drag from a control — except the media tap zones, which cover
+     most of the card and must remain draggable or horizontal swipe only
+     works on the bottom third. */
+  var ctl = e.target.closest('button, a, [data-no-drag]');
+  if (ctl && !ctl.hasAttribute('data-drag-ok')) return;
+  drag = { i:i, x0:e.clientX, y0:e.clientY, axis:'none', lx:e.clientX, lt:e.timeStamp, v:0, dx:0 };
+});
+
+vp.addEventListener('pointermove', function(e){
+  if (!drag) return;
+  var mx = e.clientX - drag.x0, my = e.clientY - drag.y0;
+  if (drag.axis === 'none') {
+    if (Math.abs(mx) < AXIS_LOCK && Math.abs(my) < AXIS_LOCK) return;
+    /* Locks once and never changes, so a diagonal drag does one thing. */
+    drag.axis = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+  }
+  if (drag.axis !== 'x') return;
+  var dt = e.timeStamp - drag.lt;
+  if (dt > 0) drag.v = (e.clientX - drag.lx) / dt;
+  drag.lx = e.clientX; drag.lt = e.timeStamp;
+
+  var limit = cardWidth() * COMMIT_RATIO;
+  var over = Math.abs(mx) - limit;
+  drag.dx = over > 0 ? Math.sign(mx) * (limit + over * RESISTANCE) : mx;
+  var p = cardParts(drag.i); if (p) paintDrag(p, drag.dx);
+});
+
+function endDrag(){
+  if (!drag) return;
+  var d = drag; drag = null;
+  var p = cardParts(d.i); if (!p) return;
+  if (d.axis !== 'x') return;
+  suppressTap = true;
+  var limit = cardWidth() * COMMIT_RATIO;
+  if (Math.abs(d.dx) >= limit || Math.abs(d.v) >= COMMIT_VELOCITY) commit(d.i, d.dx > 0 ? 'save' : 'pass');
+  else springBack(p);
+}
+vp.addEventListener('pointerup', endDrag);
+/* The browser took the gesture as a vertical scroll. Let it go cleanly. */
+vp.addEventListener('pointercancel', function(){
+  if (drag && drag.axis === 'x') { var p = cardParts(drag.i); if (p) springBack(p); }
+  drag = null;
+});
+
+/* Buttons mirror every gesture. */
+vp.addEventListener('click', function(e){
+  var b = e.target.closest && e.target.closest('[data-act]');
+  if (!b) return;
+  var i = Number(b.closest('.fd__card').getAttribute('data-index'));
+  var a = b.getAttribute('data-act');
+  var id = ITEMS[i].id;
+  if (a === 'open') { toast('Profile sheet — step 7'); return; }
+  if (a === 'undo') { doUndoPass(id); refreshCard(i); toast('Brought back'); return; }
+  if (a === 'save') {
+    /* The button manages; the gesture decides and moves on. Swiping right
+       twice leaves it saved — the heart is where you take it back. */
+    if (isSaved(id)) { doUnsave(id); refreshCard(i); toast('Removed from saved'); return; }
+    doSave(id); refreshCard(i); savedNotice(); toast('Saved');
+    return;
+  }
+  commit(i, a);
+});
+
+/* S saves, X passes, Enter opens. */
+window.addEventListener('keydown', function(e){
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  var k = e.key.toLowerCase();
+  if (k === 's') { e.preventDefault(); commit(activeIndex, 'save'); }
+  else if (k === 'x') { e.preventDefault(); commit(activeIndex, 'pass'); }
+});
+
+function needsOrigin(){ return BAND !== 'anywhere' && !ORIGIN; }
+
+/* ── settings sheet ────────────────────────────────────────────────── */
+function sheetHTML(){
+  return '<div class="fd__sheet" role="dialog" aria-modal="true" aria-label="Feed settings">'
+    + '<button class="fd__scrimbtn" data-sheet-close aria-label="Close"></button>'
+    + '<div class="fd__sheetpanel">'
+      + '<div class="fd__grab"></div>'
+      + '<div class="fd__sheethead"><h2>Feed settings</h2><button data-sheet-close>Done</button></div>'
+      + '<button class="fd__row" data-to-directory><i>&#8862;</i><span>'
+        + '<strong>Switch to the directory</strong><em>Grid, filters and full profiles</em></span></button>'
+      + '<h3>Distance</h3><div class="fd__pills">'
+        + LADDER.map(function(b){
+            return '<button class="fd__pill' + (BAND === b ? ' is-on' : '') + '" data-band="' + b + '">' + b + '</button>';
+          }).join('')
+      + '</div>'
+      + '<button class="fd__row" data-change-location><i>&#9678;</i><span><strong>'
+        + (ORIGIN ? ORIGIN.label : 'Set your location') + '</strong><em>'
+        + (ORIGIN ? 'Rounded before it leaves your phone. Change it any time.'
+                  : 'Needed for a distance. Never for &ldquo;anywhere&rdquo;.') + '</em></span></button>'
+      + '<h3>Video</h3><div class="fd__pills">'
+        + '<button class="fd__pill' + (AUTOPLAY_PREF === 'wifi' ? ' is-on' : '') + '" data-ap="wifi">Autoplay on Wi-Fi</button>'
+        + '<button class="fd__pill' + (AUTOPLAY_PREF === 'never' ? ' is-on' : '') + '" data-ap="never">Never autoplay</button>'
+      + '</div>'
+      + '<p class="fd__hint">Sound is always off when you open the feed, whatever you chose last time.</p>'
+      + '<h3>Your list</h3>'
+      + '<a class="fd__row" href="#saved"><i>&#9825;</i><span><strong>Saved</strong><em>'
+        + savesArr.length + ' on this device' + (storeOk ? '' : ' &middot; not being kept') + '</em></span></a>'
+      + (passesArr.length
+          ? '<button class="fd__row" data-flush><i>&#8635;</i><span><strong>Bring back the ones you passed</strong>'
+            + '<em>' + passesArr.length + ' hidden. Keeps your saves.</em></span></button>'
+          : '')
+      + '<p class="fd__hint">Nobody is told when you save or pass them. Passes never leave this device.</p>'
+    + '</div></div>';
+}
+
+function openSheet(){
+  if (document.querySelector('.fd__sheet')) return;
+  var h = document.createElement('div'); h.innerHTML = sheetHTML();
+  document.getElementById('stage').appendChild(h.firstChild);
+}
+function closeSheet(){ var el = document.querySelector('.fd__sheet'); if (el) el.remove(); }
+
+document.getElementById('cog').addEventListener('click', openSheet);
+
+document.addEventListener('click', function(e){
+  if (e.target.closest && e.target.closest('[data-sheet-close]')) { closeSheet(); return; }
+  if (e.target.closest && e.target.closest('[data-to-directory]')) {
+    try { localStorage.setItem('ifantasy.feed.surface.' + PRODUCT, 'directory'); } catch(err){}
+    toast('Directory preference saved'); closeSheet(); return;
+  }
+  if (e.target.closest && e.target.closest('[data-change-location]')) {
+    closeSheet(); gateView = 'ask'; gateStatus = 'none';
+    var stage = document.getElementById('stage');
+    var h = document.createElement('div'); h.innerHTML = gateHTML();
+    stage.appendChild(h.firstChild); return;
+  }
+  var ap = e.target.closest && e.target.closest('[data-ap]');
+  if (ap) { AUTOPLAY_PREF = ap.getAttribute('data-ap'); closeSheet(); openSheet(); render(); rewire(); return; }
+  var sb = e.target.closest && e.target.closest('.fd__pill[data-band]');
+  if (sb) { BAND = sb.getAttribute('data-band'); gateView = 'ask'; gateStatus = 'none';
+            closeSheet(); setBandUI(); render(); rewire(); paintGate(); return; }
+});
+
+window.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeSheet(); });
+
+/* ── coach, shown once ever ────────────────────────────────────────── */
+(function(){
+  var seen = false;
+  try { seen = localStorage.getItem('ifantasy.feed.coached') === '1'; } catch(e){}
+  if (seen) return;
+  var c = document.createElement('div');
+  c.className = 'fd__coach';
+  c.setAttribute('role','dialog');
+  c.innerHTML = '<div class="fd__coachin">'
+    + '<div class="fd__gesture"><b>&#8661;</b><div><strong>Scroll for the next person</strong>'
+      + '<span>Up and down moves through everyone near you. Decides nothing.</span></div></div>'
+    + '<div class="fd__gesture"><b>&rarr;</b><div><strong>Swipe right to save</strong>'
+      + '<span>Private. They are never told, and never see a pass.</span></div></div>'
+    + '<div class="fd__gesture"><b>&larr;</b><div><strong>Swipe left to pass</strong>'
+      + '<span>Hides them for now. You can bring everyone back any time.</span></div></div>'
+    + '<div class="fd__gesture"><b>&#8945;</b><div><strong>Tap for the next photo</strong>'
+      + '<span>Tap the name to open the full profile.</span></div></div>'
+    + '<button class="fd__coachgo" data-coach-done>Start browsing</button></div>';
+  document.getElementById('stage').appendChild(c);
+  c.addEventListener('click', function(e){
+    if (!e.target.closest('[data-coach-done]')) return;
+    try { localStorage.setItem('ifantasy.feed.coached','1'); } catch(err){}
+    c.remove();
+  });
+})();
+
+function gateHTML(){
+  if (gateView === 'cities') {
+    var q = gateQuery.trim().toLowerCase();
+    var list = CITIES.filter(function(c){ return !q || c.name.toLowerCase().indexOf(q) !== -1; });
+    return '<div class="fd__gate"><div class="fd__gatebox">'
+      + '<h2>Choose a city</h2>'
+      + '<p>These are the cities where people have verified.</p>'
+      + '<input class="fd__gatesearch" id="fd-city" type="search" placeholder="Search" value="' + gateQuery + '">'
+      + '<ul class="fd__citylist">'
+      + (list.length ? list.map(function(c){
+          return '<li><button data-city="' + c.id + '"><span>' + c.name + '</span><em>' + c.total + '</em></button></li>';
+        }).join('') : '<li class="fd__citynone">Nobody has verified in a city matching that yet.</li>')
+      + '</ul>'
+      + (gateStatus === 'none' ? '<button class="fd__gatealt" data-gate="ask">Use my location instead</button>' : '')
+      + '<button class="fd__gateskip" data-gate="anywhere">Show me everyone, anywhere</button>'
+      + '</div></div>';
+  }
+  var err = '';
+  if (gateStatus === 'denied') err = '<p class="fd__gateerr">Your browser is blocking location for this site. Choosing a city works just as well.</p>';
+  if (gateStatus === 'timeout') err = '<p class="fd__gateerr">That took too long. Try again, or choose a city.</p>';
+  if (gateStatus === 'unavailable') err = '<p class="fd__gateerr">Your device could not give us a position. Choose a city instead.</p>';
+  return '<div class="fd__gate"><div class="fd__gatebox">'
+    + '<h2>Where are you looking?</h2>'
+    + '<p>Distance is shown in bands — under 1 mile, under 5, under 10. We never show an exact distance, '
+      + 'and we round your position before it leaves your phone.</p>'
+    + '<button class="fd__gateprimary" data-gate="device"' + (gateStatus === 'asking' ? ' disabled' : '') + '>'
+      + (gateStatus === 'asking' ? 'Waiting for your phone&hellip;' : 'Use my location') + '</button>'
+    + '<button class="fd__gatealt" data-gate="cities">Choose a city instead</button>'
+    + err
+    + '<button class="fd__gateskip" data-gate="anywhere">Show me everyone, anywhere</button>'
+    + '</div></div>';
+}
+
+function paintGate(){
+  var stage = document.getElementById('stage');
+  var old = stage.querySelector('.fd__gate');
+  if (old) old.remove();
+  if (!needsOrigin()) return;
+  var h = document.createElement('div');
+  h.innerHTML = gateHTML();
+  stage.appendChild(h.firstChild);
+  var f = document.getElementById('fd-city');
+  if (f) f.addEventListener('input', function(){ gateQuery = this.value; paintGate();
+    var g = document.getElementById('fd-city'); if (g) { g.focus(); g.setSelectionRange(g.value.length, g.value.length); } });
+}
+
+document.addEventListener('click', function(e){
+  var g = e.target.closest && e.target.closest('[data-gate]');
+  if (g) {
+    var a = g.getAttribute('data-gate');
+    if (a === 'cities') { gateView = 'cities'; paintGate(); return; }
+    if (a === 'ask')    { gateView = 'ask';    paintGate(); return; }
+    if (a === 'anywhere'){ BAND = 'anywhere'; setBandUI(); render(); rewire(); paintGate(); return; }
+    if (a === 'device') {
+      if (!navigator.geolocation) { gateStatus = 'unavailable'; paintGate(); return; }
+      gateStatus = 'asking'; paintGate();
+      navigator.geolocation.getCurrentPosition(function(pos){
+        setOrigin({ lat: coarse(pos.coords.latitude), lng: coarse(pos.coords.longitude),
+                    label: 'Your location', source: 'device' });
+        gateStatus = 'ready'; render(); rewire(); paintGate(); setBandUI();
+      }, function(err){
+        gateStatus = err.code === err.PERMISSION_DENIED ? 'denied'
+                   : err.code === err.TIMEOUT ? 'timeout' : 'unavailable';
+        gateView = 'cities';
+        paintGate();
+      }, { enableHighAccuracy:false, timeout:8000, maximumAge:1800000 });
+      return;
+    }
+  }
+  if (e.target.closest && e.target.closest('[data-sound]')) {
+    SOUND_ON = !SOUND_ON;
+    vp.querySelectorAll('video').forEach(function(v){ v.muted = !SOUND_ON; });
+    vp.querySelectorAll('.fd__soundwrap').forEach(function(w){ w.remove(); });
+    var card = vp.querySelector('[data-index="' + activeIndex + '"]');
+    if (card) paintSound(card, ITEMS[activeIndex].media[segAt[activeIndex]].type === 'video');
+    return;
+  }
+  if (e.target.closest && e.target.closest('[data-play]')) {
+    var v2 = vp.querySelector('[data-index="' + activeIndex + '"] video');
+    if (v2) { v2.play(); }
+    var pw = vp.querySelector('.fd__playwrap'); if (pw) pw.remove();
+    return;
+  }
+
+  var c = e.target.closest && e.target.closest('[data-city]');
+  if (c) {
+    var city = CITIES.filter(function(x){ return x.id === c.getAttribute('data-city'); })[0];
+    if (city) { setOrigin({ lat: coarse(city.lat), lng: coarse(city.lng), label: city.name, source:'city' });
+      gateStatus = 'ready'; render(); rewire(); paintGate(); setBandUI(); }
+    return;
+  }
+});
+
+/* Demo-only: switch bands, so the gate can be triggered. */
+function setBandUI(){
+  var bar = document.querySelector('.bandbtns');
+  if (!bar) return;
+  bar.querySelectorAll('button').forEach(function(b){
+    b.classList.toggle('on', b.getAttribute('data-band') === BAND);
+  });
+  var lbl = document.getElementById('originlbl');
+  if (lbl) lbl.textContent = ORIGIN ? ORIGIN.label : 'no origin';
+}
+(function(){
+  var bar = document.createElement('div');
+  bar.className = 'bandbtns';
+  bar.innerHTML = LADDER.map(function(b){
+    return '<button data-band="' + b + '">' + b.replace('under ','<') + '</button>';
+  }).join('') + '<button data-clear-origin>clear origin</button>'
+    + '<button style="pointer-events:none" id="originlbl">—</button>';
+  document.getElementById('stage').appendChild(bar);
+  bar.addEventListener('click', function(e){
+    var b = e.target.closest('[data-band]');
+    if (b) { BAND = b.getAttribute('data-band'); gateView = 'ask'; gateStatus = 'none';
+             setBandUI(); render(); rewire(); paintGate(); return; }
+    if (e.target.closest('[data-autoplay]')) {
+      AUTOPLAY_PREF = AUTOPLAY_PREF === 'wifi' ? 'never' : 'wifi';
+      e.target.closest('[data-autoplay]').textContent = 'autoplay: ' + AUTOPLAY_PREF;
+      render(); rewire(); return;
+    }
+    if (e.target.closest('[data-clear-origin]')) { setOrigin(null); setBandUI(); paintGate(); }
+  });
+  setBandUI();
+  paintGate();
+})();
+
+function repaintEnd(){
+  var end = vp.querySelector('.fd__end');
+  if (!end) return;
+  var holder = document.createElement('div');
+  holder.innerHTML = (VIEW === 'empty') ? emptyHTML() : (VIEW === 'error') ? errorHTML() : endHTML(ITEMS.length);
+  end.replaceWith(holder.firstChild);
+}
+
+document.addEventListener('click', function(e){
+  var t = e.target.closest ? e.target : null;
+  if (!t) return;
+
+  if (t.closest('[data-flush]')) { doFlush(); return; }
+
+  if (t.closest('[data-widen]')) {
+    var n = nextBand(BAND);
+    if (n) { BAND = n; WIDER_TOTAL = (nextBand(BAND) ? 6 : undefined); VIEW = 'feed'; render(); rewire(); }
+    return;
+  }
+
+  if (t.closest('[data-retry]')) { VIEW = 'feed'; render(); rewire(); return; }
+
+  if (t.closest('[data-notify]')) { notifyOpen = true; notifyBad = false; repaintEnd();
+    var f = document.getElementById('fd-notify'); if (f) f.focus(); return; }
+
+  if (t.closest('[data-notify-send]')) {
+    var v = (document.getElementById('fd-notify') || {}).value || '';
+    if (!/.+@.+\..+/.test(v)) { notifyBad = true; repaintEnd(); document.getElementById('fd-notify').focus(); return; }
+    notifyBad = false; notifyDone = true; repaintEnd();
+    return;
+  }
+});
+
+/* Demo-only: switch between the three ways a feed stops. */
+(function(){
+  var bar = document.createElement('div');
+  bar.className = 'statebtns';
+  bar.innerHTML = '<button data-view="feed" class="on">feed</button>'
+    + '<button data-view="empty">empty</button>'
+    + '<button data-view="error">error</button>';
+  document.getElementById('stage').appendChild(bar);
+  bar.addEventListener('click', function(e){
+    var b = e.target.closest('[data-view]'); if (!b) return;
+    VIEW = b.getAttribute('data-view');
+    bar.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); });
+    render(); rewire();
+  });
+})();
+
+/* Quick exit. Replace, never assign, or the back button returns here and
+   the whole point is lost. Never tracked. */
+function leave(){
+  var url = 'https://www.google.co.uk';
+  try { history.replaceState(null, '', url); } catch(e) {}
+  location.replace(url);
+}
+document.getElementById('exit').addEventListener('click', leave);
+
+var lastEsc = 0;
+window.addEventListener('keydown', function(e){
+  if (e.key !== 'Escape') return;
+  var now = Date.now();
+  if (now - lastEsc < 1000) leave();   /* twice within a second */
+  lastEsc = now;
+});
+
+/* Left and right move segments. Every gesture needs an equivalent. */
+window.addEventListener('keydown', function(e){
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  e.preventDefault();
+  step(activeIndex, e.key === 'ArrowRight' ? 1 : -1);
+  applyWindow();
+});
+
+/* Keyboard paging — every gesture needs a non-gesture equivalent. */
+window.addEventListener('keydown', function(e){
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  e.preventDefault();
+  var next = activeIndex + (e.key === 'ArrowDown' ? 1 : -1);
+  var target = vp.querySelector('[data-index="' + Math.max(0, next) + '"]');
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+var dbgOn = true;
+document.getElementById('dbgtog').addEventListener('click', function(){
+  dbgOn = !dbgOn;
+  document.getElementById('dbg').className = dbgOn ? 'dbg' : 'dbg off';
+});
+</script>
+</body>
+</html>
