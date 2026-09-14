@@ -299,10 +299,10 @@ action row stops meaning anything.
 laptop arrived here from the site and expects a way back to it. On a phone
 there is nothing behind the feed to close to, so it is hidden below 820px.
 
-**Quick exit** stays where it always was, top right inside the column. It
+**Leave this site** stays where it always was, top right inside the column. It
 leaves for a neutral site and kills the back button.
 
-These must never be merged. Quick exit is a safety control and desktop is where
+These must never be merged. Leave this site is a safety control and desktop is where
 it matters most — a shared work computer is a likelier exposure than a phone.
 If anything, the desktop case is the argument for keeping both.
 
@@ -436,7 +436,7 @@ suppression flag that eats the next click.
 - Every card shell stays in the DOM so scroll geometry is real; only media
   within 2 cards of the active one is mounted
 - Active card via `IntersectionObserver` at 0.6 threshold, not a scroll handler
-- Quick exit, `location.replace`, Escape twice, never tracked
+- Leave this site, `location.replace`, Escape twice, never tracked
 - Arrow keys page the feed — every gesture gets a non-gesture equivalent
 - End card renders as the final snap child
 
@@ -489,4 +489,4 @@ Carried from the spec. Not open to reinterpretation — raise it, don't change i
   server reshuffles and the same person appears twice.
 - Passes are device-local and never sent to the server.
 - No pass analytics, anywhere, not even anonymised.
-- Quick exit is never tracked.
+- Leave this site is never tracked.

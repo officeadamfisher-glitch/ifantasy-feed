@@ -112,7 +112,7 @@
   margin-left: auto;
 }
 
-/* Quick exit. Persists into the feed — full-screen media is the most
+/* Leave this site. Persists into the feed — full-screen media is the most
    exposing surface in the estate, so the control cannot disappear
    because the chrome did. Never tracked. */
 .fd__exit {
@@ -521,7 +521,7 @@
    expects a way back to it; on a phone the feed is where they landed and
    there is nothing behind it to close to.
 
-   This is NOT the quick exit and must never be confused with it. Quick
+   This is NOT the leave this site and must never be confused with it. Quick
    exit leaves for a neutral site and kills the back button. This returns
    to the directory, which is still this site.
    ──────────────────────────────────────────────────────────────────── */
@@ -822,7 +822,7 @@
 .fd__soundwrap{
   position:absolute;
   top:calc(env(safe-area-inset-top, 0px) + 14px);
-  right:64px;           /* clear of quick exit */
+  right:64px;           /* clear of leave this site */
   z-index:9;
 }
 @media (min-width: 820px){
@@ -886,7 +886,7 @@
 .fd__cog{
   position:absolute;
   top:calc(env(safe-area-inset-top, 0px) + 14px);
-  right:110px;                 /* clear of quick exit and the sound button */
+  right:110px;                 /* clear of leave this site and the sound button */
   z-index:9;
   width:34px; height:34px;
   border-radius:50%;
@@ -1170,4 +1170,83 @@
   border:0; border-radius:100px;
   padding:11px 22px;
   font:600 13px var(--fd-body);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   v0.2.0 — state pill, framed media, profile arrows
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* The cog is gone. This replaces it and the two label chips beside it. */
+.fd__cog{ display:none !important }
+
+.fd__state{
+  position:absolute;
+  top:calc(env(safe-area-inset-top, 0px) + 14px);
+  left:12px;
+  z-index:9;
+  display:flex; align-items:center; gap:8px;
+  background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.28);
+  border-radius:100px;
+  padding:0 8px 0 14px;
+  min-height:44px;              /* tap target, not decoration */
+  color:#fff;
+  font:600 11.5px var(--fd-body);
+  white-space:nowrap;
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+@media (min-width: 820px){ .fd__state{ top:14px } }
+.fd__state b{ font-weight:600 }
+.fd__statesep{ opacity:.45 }
+.fd__statecaret{
+  width:20px; height:20px; border-radius:50%;
+  background:rgba(255,255,255,.18);
+  display:flex; align-items:center; justify-content:center;
+  font-size:9px;
+}
+
+/* ── framed media, profile ─────────────────────────────────────────── */
+.fd__frameBox{
+  position:relative;
+  width:100%;
+  overflow:hidden;
+  background:var(--fd-ground);
+  /* aspect-ratio arrives as an inline style so the caller can change it */
+}
+.fd__stagewrap{ position:absolute; inset:0 }
+.fd__stagewrap.is-swipeable{
+  /* The browser keeps vertical panning so the page still scrolls under
+     the frame. Horizontal is ours, and here it only moves photographs. */
+  touch-action:pan-y;
+}
+.fd__framebadge{
+  position:absolute; top:20px; left:10px; z-index:7;
+}
+
+.fd__counter{
+  position:absolute; right:10px; bottom:10px; z-index:6;
+  background:rgba(10,16,13,.6);
+  color:#fff;
+  border-radius:100px;
+  padding:4px 10px;
+  font:600 10px var(--fd-body);
+}
+
+/* Arrows are for a mouse. They never appear on touch, where the tap
+   zones and the swipe already do the job and an arrow is just clutter. */
+.fd__arrow{ display:none }
+@media (hover: hover) and (pointer: fine){
+  .fd__arrow{
+    position:absolute; top:50%; transform:translateY(-50%);
+    z-index:7;
+    width:34px; height:34px; border-radius:50%;
+    background:rgba(10,16,13,.42);
+    border:1px solid rgba(255,255,255,.25);
+    color:#fff; font-size:15px;
+    display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  }
+  .fd__arrow--prev{ left:8px }
+  .fd__arrow--next{ right:8px }
+  .fd__arrow:hover{ background:rgba(10,16,13,.62) }
 }

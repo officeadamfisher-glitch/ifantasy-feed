@@ -1,13 +1,18 @@
 {
   "name": "@ifantasy/feed",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared feed component for Escorts, Arrangements and Creator",
   "private": true,
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  "files": ["dist", "src"],
-  "sideEffects": ["*.css"],
+  "files": [
+    "dist",
+    "src"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit"

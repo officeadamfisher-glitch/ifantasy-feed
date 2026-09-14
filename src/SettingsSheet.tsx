@@ -10,14 +10,10 @@ import { useFeed } from './FeedProvider';
 import { setSurface } from './routing';
 import { keys, readFlag, writeFlag } from './storage';
 import type { AutoplayPref } from './VideoFrame';
-import type { DistanceBand } from './types';
+import type { Category } from './types';
+import { BANDS, bandLabel, unitsFor } from './bands';
 
-const BANDS: DistanceBand[] = [
-  'under 1 mile',
-  'under 5 miles',
-  'under 10 miles',
-  'anywhere',
-];
+const CATEGORIES: Category[] = ['women', 'men', 'trans'];
 
 /* ════════════════════════════════════════════════════════════════════ */
 
@@ -32,7 +28,19 @@ export function SettingsSheet({
   onAutoplay: (p: AutoplayPref) => void;
   onChangeLocation: () => void;
 }) {
-  const { config, decisions, origin } = useFeed();
+  const { config, decisions, origin, seeking } = useFeed();
+  const units = unitsFor(null);
+
+  /* Multiple on the client side, exactly one on the provider side. A
+     wider selection returns more people rather than better placement, so
+     there is nothing here to game. */
+  const toggleSeeking = (c: Category) => {
+    const next = seeking.includes(c)
+      ? seeking.filter((x) => x !== c)
+      : [...seeking, c];
+    /* Deselecting the last one means everyone, not nobody. */
+    config.onSeekingChange?.(next.length ? next : CATEGORIES);
+  };
 
   /* Escape closes. A sheet with no keyboard exit is a trap on desktop. */
   useEffect(() => {
@@ -72,6 +80,23 @@ export function SettingsSheet({
           </span>
         </button>
 
+        <h3>Looking for</h3>
+        <div className="fd__pills">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c}
+              className={'fd__pill' + (seeking.includes(c) ? ' is-on' : '')}
+              aria-pressed={seeking.includes(c)}
+              onClick={() => toggleSeeking(c)}
+            >
+              {c.charAt(0).toUpperCase() + c.slice(1)}
+            </button>
+          ))}
+        </div>
+        <p className="fd__hint">
+          Providers choose how they are listed. We never assign it.
+        </p>
+
         <h3>Distance</h3>
         <div className="fd__pills">
           {BANDS.map((b) => (
@@ -81,7 +106,7 @@ export function SettingsSheet({
               aria-pressed={config.band === b}
               onClick={() => config.onBandChange?.(b)}
             >
-              {b}
+              {bandLabel(b, units)}
             </button>
           ))}
         </div>

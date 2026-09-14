@@ -12,7 +12,7 @@
 
 import React from 'react';
 import type { FeedSlots } from './FeedViewport';
-import type { FeedItem, FeedPage, DistanceBand } from './types';
+import type { Category, FeedItem, FeedPage, DistanceBand } from './types';
 import { PersonBody, BandChip } from './cardParts';
 
 export function arrangementsSlots(opts: {
@@ -41,18 +41,25 @@ export function arrangementsSlots(opts: {
 export function arrangementsFetchPage(base = '') {
   return async ({
     band,
+    seeking,
     cursor,
     seed,
     origin,
   }: {
     band: DistanceBand;
+    seeking: Category[];
     cursor: string | null;
     seed: number | null;
     origin: { lat: number; lng: number } | null;
   }): Promise<FeedPage> => {
     const q = new URLSearchParams({ band });
+
+    /* Omitted when it is all three. Absent means everyone, so sending
+       the full list is noise. */
+    if (seeking.length && seeking.length < 3) q.set('seeking', seeking.join(','));
     if (band !== 'anywhere' && origin) {
-      q.set('near', `${origin.lat},${origin.lng}`);
+      /* `where` is the current name. `near` still works. Addendum C4. */
+      q.set('where', `${origin.lat},${origin.lng}`);
     }
     if (cursor) q.set('cursor', cursor);
     if (seed !== null) q.set('seed', String(seed));

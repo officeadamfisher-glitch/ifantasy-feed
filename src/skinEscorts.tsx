@@ -12,7 +12,7 @@
 
 import React from 'react';
 import type { FeedSlots } from './FeedViewport';
-import type { FeedItem, FeedPage, DistanceBand } from './types';
+import type { Category, FeedItem, FeedPage, DistanceBand } from './types';
 import { PersonBody, BandChip } from './cardParts';
 
 /* ── slots ──────────────────────────────────────────────────────────── */
@@ -44,23 +44,30 @@ export function escortsSlots(opts: {
 export function escortsFetchPage(base = '') {
   return async ({
     band,
+    seeking,
     cursor,
     seed,
     origin,
   }: {
     band: DistanceBand;
+    seeking: Category[];
     cursor: string | null;
     seed: number | null;
     origin: { lat: number; lng: number } | null;
   }): Promise<FeedPage> => {
     const q = new URLSearchParams({ band });
 
+    /* Omitted when it is all three. Absent means everyone, so sending
+       the full list is noise. */
+    if (seeking.length && seeking.length < 3) q.set('seeking', seeking.join(','));
+
     /* Never sent for `anywhere` — there is nothing to measure. And a
        specific band with no origin deliberately returns nothing rather
        than widening: silently showing people 40 miles away when someone
        asked for 1 destroys trust in the number on the end card. */
     if (band !== 'anywhere' && origin) {
-      q.set('near', `${origin.lat},${origin.lng}`);
+      /* `where` is the current name. `near` still works. Addendum C4. */
+      q.set('where', `${origin.lat},${origin.lng}`);
     }
     if (cursor) q.set('cursor', cursor);
     /* Echoed back on every page after the first, or the server reshuffles

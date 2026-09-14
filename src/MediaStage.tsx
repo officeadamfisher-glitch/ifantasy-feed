@@ -28,6 +28,21 @@ export interface MediaStageProps {
   onOpen?: () => void;
   /** Autoplay preference from the settings sheet. */
   autoplayPref?: AutoplayPref;
+  /**
+   * What a horizontal drag does.
+   *
+   * 'none'     the feed. GestureLayer owns horizontal there, and
+   *            horizontal means decide.
+   * 'segments' the profile. One person, nothing to decide between, so
+   *            horizontal moves through photographs.
+   *
+   * The segmented bar is what tells someone which surface they are on.
+   */
+  swipeMode?: 'none' | 'segments';
+  /** Show a "2 / 4" counter. Profile only. */
+  showCounter?: boolean;
+  /** Show previous and next arrows. Pointer devices only, by CSS. */
+  showArrows?: boolean;
 }
 
 export function MediaStage({
@@ -38,7 +53,11 @@ export function MediaStage({
   showSingleSegment = false,
   onOpen,
   autoplayPref = 'wifi',
+  swipeMode = 'none',
+  showCounter = false,
+  showArrows = false,
 }: MediaStageProps) {
+  const el = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   /* 0…1 for the current video segment, driven from the video clock. */
   const [vidProgress, setVidProgress] = useState(0);
@@ -117,13 +136,58 @@ export function MediaStage({
     img.src = next.url;
   }, [active, index, count, media]);
 
+  /* ── horizontal swipe, profile only ──────────────────────────────
+     Deliberately not the GestureLayer. That component owns save and
+     pass, and putting it on a profile would mean a swipe there decides
+     something. Here it only moves through photographs, so it is a much
+     smaller thing and it lives with the media it moves.
+     ─────────────────────────────────────────────────────────────── */
+  const drag = useRef<{ x: number; y: number; axis: 'none' | 'x' | 'y' } | null>(null);
+
+  const onDown = (e: React.PointerEvent) => {
+    if (swipeMode !== 'segments' || count <= 1) return;
+    const t = e.target as HTMLElement;
+    if (t.closest('button, a, [data-no-drag]')) return;
+    drag.current = { x: e.clientX, y: e.clientY, axis: 'none' };
+  };
+
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const mx = e.clientX - d.x;
+    const my = e.clientY - d.y;
+    if (d.axis === 'none') {
+      if (Math.abs(mx) < 10 && Math.abs(my) < 10) return;
+      d.axis = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+    }
+  };
+
+  const onUp = (e: React.PointerEvent) => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d || d.axis !== 'x') return;
+    const mx = e.clientX - d.x;
+    /* A fifth of the frame. Lower than the feed's quarter, because
+       nothing here is a decision and the cost of a stray advance is one
+       tap back. */
+    if (Math.abs(mx) < (el.current?.offsetWidth ?? 300) * 0.2) return;
+    goto(index + (mx < 0 ? 1 : -1));
+  };
+
   if (!mounted) return <div className="fd__holding" />;
   if (!current) return <div className="fd__holding" />;
 
   const showBar = count > 1 || showSingleSegment;
 
   return (
-    <>
+    <div
+      ref={el}
+      className={'fd__stagewrap' + (swipeMode === 'segments' ? ' is-swipeable' : '')}
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={() => (drag.current = null)}
+    >
       <div className="fd__media">
         {previous !== null && media[previous] ? (
           <Frame item={media[previous]!} eager fading />
@@ -201,12 +265,39 @@ export function MediaStage({
         {active && count > 1 ? `Photo ${index + 1} of ${count}` : ''}
       </span>
 
+      {showCounter && count > 1 ? (
+        <span className="fd__counter" aria-hidden="true">
+          {index + 1} / {count}
+        </span>
+      ) : null}
+
+      {showArrows && count > 1 ? (
+        <>
+          <button
+            className="fd__arrow fd__arrow--prev"
+            onClick={() => goto(index - 1)}
+            aria-label="Previous photo"
+            data-no-drag
+          >
+            &#8249;
+          </button>
+          <button
+            className="fd__arrow fd__arrow--next"
+            onClick={() => goto(index + 1)}
+            aria-label="Next photo"
+            data-no-drag
+          >
+            &#8250;
+          </button>
+        </>
+      ) : null}
+
       {onOpen ? (
         <button className="fd__sr" onClick={onOpen}>
           Open profile
         </button>
       ) : null}
-    </>
+    </div>
   );
 }
 

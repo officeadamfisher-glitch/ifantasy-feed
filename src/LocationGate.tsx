@@ -53,7 +53,7 @@ export function LocationGate({
           <>
             <h2>Where are you looking?</h2>
             <p>
-              Distance is shown in bands — under 1 mile, under 5, under 10. We
+              Distance is shown in bands rather than exact figures. We
               never show an exact distance, and we round your position before
               it leaves your phone.
             </p>

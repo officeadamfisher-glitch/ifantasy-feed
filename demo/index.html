@@ -266,7 +266,7 @@ button{font:inherit;cursor:pointer;border:0}
   <div class="fd__stage" id="stage">
     <div class="fd__viewport" id="vp" role="list" aria-label="Feed"></div>
     <button class="fd__cog" id="cog" aria-label="Feed settings">&#9881;</button>
-    <button class="fd__exit" id="exit" aria-label="Quick exit — leave this site immediately">Exit</button>
+    <button class="fd__exit" id="exit" aria-label="Leave this site now">Leave</button>
     <div class="dbg" id="dbg">—</div>
     <button class="dbgtog" id="dbgtog">debug</button>
   </div>
@@ -281,7 +281,7 @@ button{font:inherit;cursor:pointer;border:0}
    this exists so the scroll can be felt before anything is wired up.
 
    In scope: scroll-snap, card mounting window, active-card detection,
-   end card, quick exit, first-run banner.
+   end card, leave this site, first-run banner.
    Not in scope: gestures, video, save/pass. Steps 2–6.
    ══════════════════════════════════════════════════════════════════════ */
 
@@ -1222,7 +1222,7 @@ document.addEventListener('click', function(e){
   });
 })();
 
-/* Quick exit. Replace, never assign, or the back button returns here and
+/* Leave this site. Replace, never assign, or the back button returns here and
    the whole point is lost. Never tracked. */
 function leave(){
   var url = 'https://www.google.co.uk';

@@ -3,12 +3,21 @@
    Shared across Escorts, Arrangements and Creator.
    ══════════════════════════════════════════════════════════════════════ */
 
-/** Distance is ALWAYS a band string. A number must never reach the client. */
-export type DistanceBand =
-  | 'under 1 mile'
-  | 'under 5 miles'
-  | 'under 10 miles'
-  | 'anywhere';
+/**
+ * Distance is ALWAYS a band identifier. A number must never reach the
+ * client.
+ *
+ * These are identifiers, not measurements. The server owns the radius in
+ * metres; the component owns the words, because "under 5 miles" reads as
+ * nonsense in Berlin. See bands.ts and Addendum C5.
+ */
+export type DistanceBand = 'near' | 'city' | 'wider' | 'anywhere';
+
+/**
+ * How a provider chooses to be found. Self declared at listing creation,
+ * never assigned, never derived from Identity. Addendum C1.
+ */
+export type Category = 'women' | 'men' | 'trans';
 
 export interface MediaItem {
   type: 'photo' | 'video';
@@ -42,6 +51,8 @@ interface BaseItem {
 export interface PersonItem extends BaseItem {
   kind: 'person';
   name: string;
+  /** Self declared by the provider. Exactly one. */
+  category?: Category;
   /** Broad area only — "Camden", never a street. */
   area: string;
   band: DistanceBand;
@@ -100,6 +111,12 @@ export interface FeedConfig {
   product: ProductId;
   band: DistanceBand;
   /**
+   * Which categories to show. Answered once at the door and remembered.
+   * This is not a filter on the feed, it is which feed is being opened.
+   * Absent or all three means everyone.
+   */
+  seeking?: Category[];
+  /**
    * Fetches one page. Must echo `seed` back after the first call.
    *
    * `origin` is present only when `band !== 'anywhere'`, and its
@@ -109,6 +126,8 @@ export interface FeedConfig {
    */
   fetchPage: (args: {
     band: DistanceBand;
+    /** Empty or all three means no narrowing. Never guess on someone's behalf. */
+    seeking: Category[];
     cursor: string | null;
     seed: number | null;
     origin: { lat: number; lng: number } | null;
@@ -119,6 +138,8 @@ export interface FeedConfig {
   exitUrl?: string;
   /** Widening the band. The product owns `band`, so it performs the change. */
   onBandChange?: (band: DistanceBand) => void;
+  /** Changing who the feed is showing. The product owns `seeking`. */
+  onSeekingChange?: (seeking: Category[]) => void;
   /**
    * Capturing an email for "tell me when someone new verifies".
    * Omit it and the option is not shown — a dead field that swallows an

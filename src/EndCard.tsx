@@ -17,22 +17,13 @@
 
 import React, { useState } from 'react';
 import { useFeed } from './FeedProvider';
+import { nextBand, bandLabel as label, unitsFor } from './bands';
 import type { DistanceBand } from './types';
 
-const LADDER: DistanceBand[] = [
-  'under 1 mile',
-  'under 5 miles',
-  'under 10 miles',
-  'anywhere',
-];
-
-export function nextBand(band: DistanceBand): DistanceBand | null {
-  const i = LADDER.indexOf(band);
-  return i >= 0 && i < LADDER.length - 1 ? LADDER[i + 1]! : null;
-}
+export { nextBand };
 
 function bandLabel(b: DistanceBand): string {
-  return b === 'anywhere' ? 'anywhere' : b;
+  return label(b, unitsFor(null)).toLowerCase();
 }
 
 /* ════════════════════════════════════════════════════════════════════ */

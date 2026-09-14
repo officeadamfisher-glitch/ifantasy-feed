@@ -16,7 +16,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import type { FeedConfig, FeedItem, FeedTheme } from './types';
+import type { Category, FeedConfig, FeedItem, FeedTheme } from './types';
 import { themes } from './theme';
 import { useDecisions, type Decisions } from './useDecisions';
 import { useOrigin, type OriginState } from './useOrigin';
@@ -45,6 +45,15 @@ interface FeedState {
   origin: OriginState;
   /** A distance was asked for and we have nothing to measure from. */
   needsOrigin: boolean;
+  /**
+   * Everything in the feed is paused. Set it when a profile sheet opens
+   * over the feed, or two video elements end up alive at once and audio
+   * carries on from a card nobody can see.
+   */
+  suspended: boolean;
+  setSuspended: (v: boolean) => void;
+  /** Resolved from config, with absent meaning all three. */
+  seeking: Category[];
 }
 
 const Ctx = createContext<FeedState | null>(null);
@@ -67,6 +76,13 @@ export function FeedProvider({
   const [widerTotal, setWiderTotal] = useState<number | undefined>(undefined);
   const [status, setStatus] = useState<Status>('loading');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [suspended, setSuspended] = useState(false);
+
+  /* Absent means everyone. Never narrow on somebody's behalf. */
+  const seeking = useMemo<Category[]>(
+    () => (config.seeking?.length ? config.seeking : ['women', 'men', 'trans']),
+    [config.seeking]
+  );
 
   /* The seed is issued by the server on the first page and echoed back on
      every subsequent one. Without this the server reshuffles between pages
@@ -80,6 +96,8 @@ export function FeedProvider({
   /* loadPage is memoised on config; the origin is read through a ref so a
      new fix does not rebuild the fetcher mid-page. */
   const originRef = useRef<{ lat: number; lng: number } | null>(null);
+  /* Read through a ref so a change does not rebuild the fetcher mid page. */
+  const seekingRef = useRef<Category[]>(['women', 'men', 'trans']);
 
   const origin = useOrigin(config.product);
 
@@ -87,6 +105,10 @@ export function FeedProvider({
      server correctly returns nothing rather than widening, so the client
      must ask before it asks the server. */
   const needsOrigin = config.band !== 'anywhere' && !origin.origin;
+
+  useEffect(() => {
+    seekingRef.current = seeking;
+  }, [seeking]);
 
   useEffect(() => {
     originRef.current = origin.origin
@@ -103,6 +125,7 @@ export function FeedProvider({
     try {
       const page = await config.fetchPage({
         band: config.band,
+        seeking: seekingRef.current,
         cursor: cursor.current,
         seed: seed.current,
         /* Never sent for `anywhere` — there is nothing to measure. */
@@ -149,7 +172,7 @@ export function FeedProvider({
     setStatus('loading');
     void loadPage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.band, config.product, origin.origin?.lat, origin.origin?.lng]);
+  }, [config.band, config.product, origin.origin?.lat, origin.origin?.lng, seeking.join(',')]);
 
   /* Prefetch as the active card approaches the end. */
   useEffect(() => {
@@ -205,8 +228,12 @@ export function FeedProvider({
       decisions,
       origin,
       needsOrigin,
+      suspended,
+      setSuspended,
+      seeking,
     }),
-    [items, total, widerTotal, status, activeIndex, config, isMounted, retry, decisions, origin, needsOrigin]
+    [items, total, widerTotal, status, activeIndex, config, isMounted, retry,
+     decisions, origin, needsOrigin, suspended, seeking]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

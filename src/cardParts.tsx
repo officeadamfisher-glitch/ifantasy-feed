@@ -13,6 +13,7 @@ import React from 'react';
 import { useCardActions } from './GestureLayer';
 import { useFeed } from './FeedProvider';
 import type { PersonItem } from './types';
+import { bandLabel, unitsFor } from './bands';
 
 /* ── verified badge ─────────────────────────────────────────────────── */
 
@@ -128,9 +129,9 @@ export function PersonBody({
       <MetaLine
         parts={[
           item.area,
-          /* Always the band string. A number must never reach this line,
-             or any other. */
-          item.band,
+          /* Always a band, never a number, and labelled in the reader's
+             own units. */
+          bandLabel(item.band, unitsFor(null)),
           item.activeToday && 'active today',
         ]}
       />
@@ -142,7 +143,7 @@ export function PersonBody({
 }
 
 export function BandChip({ item }: { item: PersonItem }) {
-  return <span className="fd__chip">{item.band}</span>;
+  return <span className="fd__chip">{bandLabel(item.band, unitsFor(null))}</span>;
 }
 
 /** "14 Mar" — short enough for a badge, specific enough to be a claim. */

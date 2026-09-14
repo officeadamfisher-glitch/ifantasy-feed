@@ -2,10 +2,16 @@
 export { FeedProvider, useFeed, MOUNT_RADIUS } from './FeedProvider';
 export { FeedViewport } from './FeedViewport';
 export { MediaStage } from './MediaStage';
+export { MediaFrame } from './MediaFrame';
+export type { MediaFrameProps } from './MediaFrame';
+export {
+  BANDS, BAND_METRES, bandLabel, nextBand, normaliseBand, unitsFor,
+} from './bands';
+export type { Units } from './bands';
 export { VideoFrame, SoundButton, useSound, isSoundOn, setSoundOn, canAutoplay } from './VideoFrame';
 export type { AutoplayPref, VideoFrameProps } from './VideoFrame';
 export { GestureLayer, useCardActions } from './GestureLayer';
-export { EndCard, EmptyCard, ErrorCard, nextBand } from './EndCard';
+export { EndCard, EmptyCard, ErrorCard } from './EndCard';
 export { VerifiedBadge, MetaLine, Tags, ActionRow, Bio, PersonBody, BandChip, shortDate } from './cardParts';
 export { escortsSlots, escortsFetchPage, fetchCities } from './skinEscorts';
 export { arrangementsSlots, arrangementsFetchPage } from './skinArrangements';
@@ -27,5 +33,5 @@ export type { Decisions } from './useDecisions';
 export { keys as storageKeys, isEphemeral } from './storage';
 export type {
   FeedItem, PersonItem, PostItem, MediaItem, FeedPage,
-  FeedConfig, FeedTheme, ProductId, DistanceBand,
+  FeedConfig, FeedTheme, ProductId, DistanceBand, Category,
 } from './types';

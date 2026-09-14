@@ -18,6 +18,7 @@ import { LocationGate } from './LocationGate';
 import { SettingsSheet, CoachOverlay, useCoach } from './SettingsSheet';
 import { keys, readValue, writeValue } from './storage';
 import type { AutoplayPref } from './VideoFrame';
+import { bandLabel, unitsFor } from './bands';
 import { themeVars } from './theme';
 import type { FeedItem } from './types';
 
@@ -49,12 +50,22 @@ export function FeedViewport({ slots }: { slots: FeedSlots }) {
     config,
     origin,
     needsOrigin,
+    suspended,
+    seeking,
   } = useFeed();
   const scroller = useRef<HTMLDivElement>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [gateOpen, setGateOpen] = useState(false);
   const [coach, coachDone] = useCoach();
   const [autoplay, setAutoplayState] = useState<AutoplayPref>('wifi');
+
+  /* Miles or kilometres. The country of the place someone chose beats
+     their browser language, because a phone set to English in Berlin is
+     common and language is not location. */
+  const units = useMemo(
+    () => unitsFor(originCountry(config, origin.origin?.label)),
+    [config, origin.origin?.label]
+  );
 
   useEffect(() => {
     const v = readValue(keys.autoplay(config.product));
@@ -149,6 +160,7 @@ export function FeedViewport({ slots }: { slots: FeedSlots }) {
             count={items.length}
             slots={slots}
             autoplay={autoplay}
+            suspended={suspended}
           />
         ))}
 
@@ -160,13 +172,37 @@ export function FeedViewport({ slots }: { slots: FeedSlots }) {
       <SavedNotice />
       <ExitButton url={config.exitUrl} />
 
+      {/* One control, replacing the cog and the two label chips.
+
+          The cog was a second door to a room that already had one: the
+          chips beside it opened the same sheet. It is deleted rather than
+          moved.
+
+          It never hides, even when both values are at their widest. A
+          person who cannot see what is filtering their results assumes
+          nothing is.
+
+          It is also the early warning for the two control limit: two
+          values fit here comfortably and a third will not. When that
+          happens, raise it rather than making this scroll. */}
       <button
-        className="fd__cog"
+        className="fd__state"
         onClick={() => setSheetOpen(true)}
-        aria-label="Feed settings"
+        aria-haspopup="dialog"
+        aria-label={`Showing ${seekingLabel(seeking)}, ${bandLabel(
+          config.band,
+          units
+        ).toLowerCase()}. Change what you are seeing`}
         data-no-drag
       >
-        &#9881;
+        <b>{seekingLabel(seeking)}</b>
+        <span className="fd__statesep" aria-hidden="true">
+          &middot;
+        </span>
+        <b>{bandLabel(config.band, units)}</b>
+        <span className="fd__statecaret" aria-hidden="true">
+          &#9662;
+        </span>
       </button>
 
       {sheetOpen ? (
@@ -210,15 +246,19 @@ function FeedCard({
   count,
   slots,
   autoplay,
+  suspended,
 }: {
   item: FeedItem;
   index: number;
   count: number;
   slots: FeedSlots;
   autoplay: AutoplayPref;
+  suspended: boolean;
 }) {
   const { activeIndex, isMounted, decisions } = useFeed();
-  const active = index === activeIndex;
+  /* Suspended means a profile sheet is open over the feed. Treating the
+     card as inactive pauses its video and its gestures in one move. */
+  const active = index === activeIndex && !suspended;
   const mounted = isMounted(index);
   const passed = decisions.isPassed(item.id);
 
@@ -368,9 +408,29 @@ function ExitButton({ url = 'https://www.google.co.uk' }: { url?: string }) {
     <button
       className="fd__exit"
       onClick={leave}
-      aria-label="Quick exit — leave this site immediately"
+      aria-label="Leave this site now"
     >
-      Exit
+      Leave
     </button>
   );
+}
+
+
+/* ════════════════════════════════════════════════════════════════════ */
+
+function seekingLabel(seeking: string[]): string {
+  if (seeking.length >= 3) return 'Everyone';
+  const words = seeking.map((s) => s.charAt(0).toUpperCase() + s.slice(1));
+  if (words.length === 1) return words[0]!;
+  return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
+}
+
+/** The country of the chosen place, when we can tell. */
+function originCountry(
+  config: { cities?: { name: string; country?: string }[] },
+  label?: string
+): string | null {
+  if (!label) return null;
+  const match = config.cities?.find((c) => c.name === label);
+  return match?.country ?? null;
 }
